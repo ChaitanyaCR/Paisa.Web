@@ -1,11 +1,16 @@
 # Decisions
 
-Decisions taken in Phase 0 that later phases depend on. Each has a status:
+Decisions taken in Phase 0 (and one in Phase 1) that later phases depend on. See
+[`plan.md`](plan.md) for the phase-by-phase task list and current status — start
+there, come here for the *why* behind a constraint. Each decision has a status:
 **Accepted** (settled, build on it), **Proposed** (a recommendation that needs
 sign-off before Phase 3 starts), or **Blocked** (needs an answer from outside
 the engineering team).
 
-Recorded 2026-09-12.
+Recorded 2026-09-12. Phases 0 and 1 are complete and committed as of this
+writing; Phase 2 has not started. If you are resuming this project in a new
+session, read every decision below before writing Phase 2 code — they are
+binding constraints, not suggestions.
 
 ---
 
@@ -93,21 +98,24 @@ brings a much shorter idle timeout.
 
 ## D-004 · Transactional email provider — Amazon SES (ap-south-1)
 
-**Status:** Proposed, needs procurement plus the D-002 answer.
+**Status:** Proposed, needs procurement sign-off. (No longer blocked on data
+region — D-002/D-008 resolved that.)
 
 Only needed for password reset (task 3.4) and, later, email verification.
 
 Recommended: **Amazon SES in ap-south-1 (Mumbai)** — keeps recipient addresses and
-reset links processed inside India, which sidesteps the D-002 question for email
-even if it stays open for the database. Called over HTTPS from the Worker, so no
-SMTP support is required.
+reset links processed inside India, consistent with D-008's residency decision
+for the database. Called over HTTPS from the Node server, so no SMTP support is
+required.
 
 Alternatives considered: Resend (best developer experience, but US/EU processing),
 Postmark (strong deliverability, US), Brevo (EU). All are fine technically; SES
 wins on data residency, which is the deciding factor here.
 
-Whichever is chosen, the API key is a Worker secret (`wrangler secret put`), never
-a committed value or a `vars` entry.
+Whichever is chosen, the API key is a secret supplied via the host's environment
+or secrets manager at deploy time — **never** `wrangler secret` (there is no
+Worker in this architecture; see D-008) and never a committed value or a
+tracked `.env` file.
 
 ---
 
@@ -228,3 +236,43 @@ Recommended: drop the dependency, keep `engines`, and add an `.nvmrc` pinning
 22.13.0 so the shell and npm agree. Not done here because changing which Node runs
 the toolchain mid-phase risked destabilising a working build; worth doing as a
 standalone change.
+
+---
+
+## D-010 · Phase 1 pulled two Phase 6 fixes forward; app-state is the Phase 2 seam
+
+**Status:** Accepted 2026-09-12, recorded during Phase 1.
+
+Extracting the prototype's inline logic into shared helpers forced a decision
+about what those helpers do when given bad input — deferring that decision
+wasn't an option once the code was shared across pages. Two Phase 6 items
+closed as a result, ahead of schedule:
+
+- **6.3 (division by zero).** `percentage()` and `ratio()` in
+  [`lib/money.ts`](../lib/money.ts) return `0` (or clamp to 100) instead of
+  `NaN`/`Infinity` when the denominator is zero. Every call site was updated to
+  use them.
+- **6.1 (unsafe category lookup), partially.** `getCategory()` in
+  [`components/app-state.tsx`](../components/app-state.tsx) is typed
+  `Category | undefined` — no non-null assertion — and the shared
+  `CategoryIcon`/`CategoryPill` components in
+  [`components/category-icon.tsx`](../components/category-icon.tsx) render
+  correctly when it's `undefined`. Not fully closed: this only covers call
+  sites that go through the shared components. If Phase 2/4 introduce a new
+  place that looks up a category by id from an *unfiltered* source (e.g. a raw
+  API response before the corresponding category has loaded), re-verify it
+  doesn't assume the category exists.
+
+**Why this belongs here and not just in `plan.md`:** it changes what Phase 6
+actually has left to do, and a session picking up Phase 6 cold needs to know
+these two are already done rather than re-implementing them.
+
+**The Phase 2 seam.** [`components/app-state.tsx`](../components/app-state.tsx)
+is a `useState`-backed React context implementing: `categories`,
+`transactions`, `budgets`, `budgeting`, `notice`, and the mutators
+`saveTransaction`, `deleteTransaction`, `saveCategory`, `toggleArchive`,
+`saveBudget`, plus the `getCategory` lookup. Every page and feature component
+reads and writes through `useAppState()` — none touch `useState` or sample
+data directly. Phase 2/4 should give this same shape a `fetch('/api/*')`
+backing rather than inventing a new data-access pattern; that is what keeps
+the swap from rippling into every page.
