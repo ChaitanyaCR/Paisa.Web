@@ -11,7 +11,7 @@ describe('checkDatabase', () => {
   it('reaches the database and reports the applied schema version', () => {
     db = freshDb();
 
-    expect(checkDatabase(db)).toStrictEqual({ ok: true, schemaVersion: '0001' });
+    expect(checkDatabase(db)).toStrictEqual({ ok: true, schemaVersion: '0002' });
   });
 
   it('fails loudly when the schema is missing', () => {

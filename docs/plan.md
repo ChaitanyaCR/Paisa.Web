@@ -13,18 +13,17 @@
 
 ## 📍 Resume here (for a fresh session)
 
-**Current state:** Phases 0 and 1 are complete and committed. Phase 2 (data layer) is next
-and has not been started — no schema migration beyond the Phase 0 bootstrap, no repository
-layer, no API routes. The app still runs entirely on in-memory sample data via
-[`components/app-state.tsx`](../components/app-state.tsx).
+**Current state:** Phases 0 and 1 are complete and committed. Phase 2 (data layer) is complete
+in the `feat/data-layer` working tree and awaiting commit. The app still runs on in-memory
+sample data via [`components/app-state.tsx`](../components/app-state.tsx); Phase 3 authentication
+is next, followed by Phase 4 replacing that state seam with the new APIs.
 
-**Before writing any Phase 2 code:**
+**Before writing any Phase 3 code:**
 1. Read [`decisions.md`](decisions.md) in full — D-001 through D-009 are binding constraints,
    not suggestions. D-005 (integer paise) and D-008 (SQLite, not D1) especially.
 2. Run the full gate to confirm you're starting from a known-good state:
    `npm run lint && npm run typecheck && npm test && npm run build`
-3. Re-read the Phase 1 deviation notes below — two Phase 6 fixes were pulled forward, and the
-   state seam in `components/app-state.tsx` is what Phase 2 replaces.
+3. Resolve D-003 and D-004's proposed decisions before implementing sessions and reset email.
 
 **Do not re-introduce:** Cloudflare Workers, D1, `wrangler`, or any `@cloudflare/*` package —
 that path was deliberately abandoned in Phase 0 (D-002, D-008). If asked to "add D1" or "deploy
@@ -116,12 +115,11 @@ they all go through `useAppState()` — so the swap should not need to touch the
 
 ---
 
-## Phase 2 — Data layer
+## Phase 2 — Data layer ✅
 
-**Not started.** This is the next phase. The schema below extends the Phase 0 bootstrap
-migration ([`migrations/0001_bootstrap.sql`](../migrations/0001_bootstrap.sql)) with new
-numbered migrations via `npm run db:create` — never edit `0001` itself (D-006 forbids editing
-an applied migration).
+**Done in the working tree.** Migration `0002_application_schema.sql` extends the Phase 0
+bootstrap without modifying it. Repositories own all SQL, shared Zod schemas validate route
+inputs, session lookup provides the Phase 3 auth seam, and route tests cover 401/422/403 behavior.
 
 | # | Task | Acceptance |
 |---|---|---|
@@ -244,13 +242,13 @@ and Phase 6.6's chart replacement; run them before and after either change.
 ## Sequencing
 
 ```
-Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ──► Phase 3 ──► Phase 4 ──► Phase 5
+Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ✅ ──► Phase 3 ──► Phase 4 ──► Phase 5
                                   │                        │
                                   └──► Phase 6 (parallel) ◄┘
                                              │
                                              └──► Phase 7 (7.6 already active since Phase 0)
 ```
 
-Phase 2 is next and unstarted. Phases 0–4 are the critical path — completing them is the point
+Phase 3 is next. Phases 0–4 are the critical path — completing them is the point
 at which every feature in the design is genuinely functional. Phase 5 closes the gaps the
 prototype hides, Phase 6 can run alongside Phase 4, and Phase 7 gates launch.
