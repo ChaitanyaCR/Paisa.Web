@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: lint · types · tests · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      # better-sqlite3 is a native addon. `npm ci` fetches a prebuilt binary for
+      # the Node ABI in use; if that ever fails the job needs build-essential.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Runs against throwaway in-memory SQLite databases, migrated from the same
+      # SQL files that ship. No credentials and no external services involved.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

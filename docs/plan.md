@@ -2,7 +2,10 @@
 
 > Turning the screen prototype in [`app/page.tsx`](../app/page.tsx) into a working product.
 >
-> **Architecture decision:** Cloudflare D1 backend with real authentication.
+> **Architecture decision:** Node server on India-resident infrastructure, SQLite on the
+> same host, with real authentication. (Revised 2026-09-12 — see D-008 in
+> [`decisions.md`](decisions.md). Was Cloudflare Workers + D1; changed because D1 has no
+> India region.)
 > **Refactor decision:** modularise `app/page.tsx` before adding features.
 
 ---
@@ -12,8 +15,7 @@
 `app/page.tsx` is a 1942-line `'use client'` component holding the entire product: 6 pages, 4 dialogs,
 3 auth screens, charts, filters and toasts — all driven by `useState` over seeded sample data. It is a
 faithful, complete UI spec. Nothing behind it is real: no routes, no API, no database, no auth, no
-persistence. D1 and R2 are wired into [`vite.config.ts`](../vite.config.ts) but disabled
-(`.openai/hosting.json` has both `null`).
+persistence.
 
 The Settings screen states this outright: *"This review uses sample data in memory. Changes reset when
 the page reloads. Authentication and cross-device sync are not connected yet."*
@@ -23,18 +25,22 @@ close the gaps the prototype papers over.
 
 ---
 
-## Phase 0 — Foundations
+## Phase 0 — Foundations ✅
 
-Blocks everything else.
+Blocks everything else. **Done** — `npm run lint`, `npm run typecheck`, `npm test` and
+`npm run build` all pass; `/api/health` returns `{"status":"ok"}` from a SQLite-backed
+route handler in both `npm run dev` and the built Node server. Carried forward: the
+India-resident host still has to be provisioned, with backups and encryption at rest
+(open items in D-008).
 
 | # | Task | Acceptance |
 |---|---|---|
-| 0.1 | Enable D1: set `d1: "DB"` in [`.openai/hosting.json`](../.openai/hosting.json), provision the real database, confirm the binding reaches the Worker in `wrangler dev` and on deploy | `SELECT 1` succeeds from a route handler locally and in production |
-| 0.2 | Add migrations tooling (`migrations/NNNN_*.sql` plus an `npm run db:migrate` wrapper over `wrangler d1 migrations apply`) | Migrations apply to local Miniflare and remote, idempotently |
-| 0.3 | Add a test runner — Vitest with `@cloudflare/vitest-pool-workers` so tests run against real D1 — and an `npm test` script | One passing smoke test hitting a D1-backed handler |
-| 0.4 | CI: run `oxlint`, `tsc --noEmit`, `vitest`, `vinext build` on pull requests | Red CI blocks merge |
-| 0.5 | Add `tsconfig.tsbuildinfo` to [`.gitignore`](../.gitignore) | Clean `git status` after a build |
-| 0.6 | Decide and document: email provider for password reset, session lifetime, D1 data region, password-hashing algorithm | Written into `docs/decisions.md` |
+| 0.1 | Target a Node server (Nitro `node` preset) with SQLite via `better-sqlite3`; confirm the database is reachable from a route handler in dev and in the built server | ✅ `SELECT 1` succeeds through `/api/health` in both |
+| 0.2 | Add migrations tooling (`migrations/NNNN_*.sql` plus `npm run db:migrate`), checksummed and forward-only | ✅ Idempotent; an edited applied migration is refused |
+| 0.3 | Add a test runner — Vitest against throwaway in-memory SQLite, migrated through the production code path — and an `npm test` script | ✅ 4 tests covering the health check and the migration runner |
+| 0.4 | CI: run `oxlint`, `tsc --noEmit`, `vitest`, `vinext build` on pull requests | ✅ [`ci.yml`](../.github/workflows/ci.yml); all four gates green |
+| 0.5 | Add `tsconfig.tsbuildinfo` to [`.gitignore`](../.gitignore) — plus `/data/` and `*.db`, which hold personal data | ✅ Clean `git status` after a build; the database can never be committed |
+| 0.6 | Decide and document: email provider for password reset, session lifetime, data region, password-hashing algorithm | ✅ [`decisions.md`](decisions.md), D-001 to D-009 |
 
 ---
 
@@ -59,10 +65,10 @@ every later task shrinks as a result.
 
 | # | Task | Acceptance |
 |---|---|---|
-| 2.1 | Schema migration: `users`, `sessions`, `password_resets`, `categories`, `transactions`, `budgets`, `user_settings`. Money stays **INTEGER paise** (the prototype already does this — keep it, never floats). Dates stay `TEXT 'YYYY-MM-DD'`, months `TEXT 'YYYY-MM'` | Migration applies clean; foreign keys and `ON DELETE` behaviour defined |
+| 2.1 | Schema migration: `users`, `sessions`, `password_resets`, `categories`, `transactions`, `budgets`, `user_settings`. Money stays **INTEGER paise** (the prototype already does this — keep it, never floats). Dates stay `TEXT 'YYYY-MM-DD'`, months `TEXT 'YYYY-MM'`. `PRAGMA foreign_keys` is already enabled per connection in [`lib/db/client.ts`](../lib/db/client.ts) | Migration applies clean; foreign keys and `ON DELETE` behaviour defined |
 | 2.2 | Constraints: unique `(user_id, type, lower(name))` on categories (backs the duplicate-name check the dialog already does client-side); primary key `(user_id, month, category_id)` on budgets; `CHECK (amount_paise > 0)`; `CHECK (type IN ('income','expense'))` | Duplicate and invalid inserts are rejected by the database, not only the UI |
 | 2.3 | Indexes: `transactions(user_id, date DESC)`, `transactions(user_id, category_id)`, `budgets(user_id, month)` | Query plans use them |
-| 2.4 | Repository layer in `lib/db/*.ts` — every query scoped by `user_id`, fully parameterised, no string interpolation | Typed functions; no raw SQL above this layer |
+| 2.4 | Repository layer in `lib/db/*.ts` — every query scoped by `user_id`, fully parameterised, no string interpolation. This is also the seam that makes a later move to Postgres contained (D-008) | Typed functions; no raw SQL above this layer |
 | 2.5 | Validation schemas (Zod or equivalent) shared by client and server for transaction, category, budget and settings payloads | One validation source; the server never trusts the client |
 | 2.6 | Route handlers under `app/api/`: transactions (list with filters and pagination, create, update, delete), categories (list, create, update, archive/restore), budgets (list by month, upsert, delete-on-zero), settings (get, patch) | Each returns 401 unauthenticated, 403 on cross-user access, 422 on invalid input |
 | 2.7 | Seed each new account with the design's starter categories (Salary, Freelance, Rent & bills, Food & groceries, Shopping, Transport, Health & wellness) — but **not** the sample transactions | A new user lands on a genuine empty state, not fabricated money |
@@ -75,7 +81,7 @@ The design defines three auth screens and states plainly that they do nothing. T
 
 | # | Task | Acceptance |
 |---|---|---|
-| 3.1 | Password hashing via WebCrypto PBKDF2-HMAC-SHA256, ≥600k iterations, per-user random salt, versioned hash string to allow future rehashing. *(bcrypt and argon2 have no native Workers support — if InfoSec mandates argon2id, budget for a WASM build; decide in 0.6.)* | Unit tests cover hash, verify, and rehash-on-login |
+| 3.1 | Password hashing via WebCrypto PBKDF2-HMAC-SHA256, 600k iterations (measured at 199 ms on Node — D-001), per-user random salt, versioned hash string to allow future rehashing. Now that the runtime is Node, argon2id is a drop-in native module if InfoSec prefers it | Unit tests cover hash, verify, and rehash-on-login |
 | 3.2 | Sign-up: name, email, password ≥8 characters. Normalise and validate email, reject duplicates without revealing account existence, create user + default categories + settings in one transaction | `POST /api/auth/signup` creates the account and signs the user in |
 | 3.3 | Sign-in: constant-time verification, opaque session token, `HttpOnly` `Secure` `SameSite=Lax` cookie, server-side session row with expiry and rotation on login | Wrong password and unknown email are indistinguishable in both response and timing |
 | 3.4 | Password reset: single-use, hashed, short-TTL token; email delivery via the provider chosen in 0.6; **plus a `/reset/[token]` completion screen the design omits**; always respond "if that email exists…" | Full flow works: request → email → set new password → all existing sessions invalidated |

@@ -31,7 +31,6 @@ import {
   BriefcaseBusiness,
   Laptop,
   Leaf,
-  LogOut,
   ShieldCheck,
   ArrowRight,
   Check,
@@ -307,7 +306,7 @@ export default function Home() {
     setError('');
     setModal('transaction');
   };
-  const saveTransaction = (event: React.FormEvent) => {
+  const saveTransaction = (event: React.SyntheticEvent) => {
     event.preventDefault();
     const amount = Number(entry.amount);
     if (
@@ -1457,7 +1456,7 @@ export default function Home() {
                             key={value as string}
                             className={appearance === value ? 'selected' : ''}
                             onClick={() => setAppearance(value as string)}
-                            aria-label={`${value} appearance`}
+                            aria-label={`${value as string} appearance`}
                           >
                             {typeof Icon !== 'string' && <Icon size={17} />}
                             <span>{value as string}</span>
@@ -1629,7 +1628,6 @@ export default function Home() {
                           });
                           setError('');
                         }}
-                        initialFocus
                       />
                       <div className="calendar-footer">
                         <button
