@@ -44,20 +44,37 @@ India-resident host still has to be provisioned, with backups and encryption at 
 
 ---
 
-## Phase 1 — Refactor (no visible change)
+## Phase 1 — Refactor (no visible change) ✅
 
-The goal is that a reviewer diffing the rendered output sees nothing. Do this before any feature work;
-every later task shrinks as a result.
+**Done.** `app/page.tsx` went from 1942 lines to 29 files, the largest 221 lines. All 11 routes
+render in dev and in the built server; filters round-trip through the URL. Two deliberate
+deviations are noted under the table.
 
 | # | Task | Acceptance |
 |---|---|---|
-| 1.1 | Real routes: `app/(app)/overview|transactions|analytics|budgets|categories|settings/page.tsx` and `app/(auth)/signin|signup|reset/page.tsx`. Replace the `page` state machine with the router; sidebar and mobile nav become `<Link>`s | Deep links work, browser back/forward works, refresh keeps you on the page |
-| 1.2 | Extract the shell into `components/app-shell/` (sidebar, topbar, mobile-nav, footer) as a layout | Layout renders once, not per page |
-| 1.3 | Extract feature components: `features/transactions/` (list, row, filter-bar, dialog), `features/categories/`, `features/budgets/`, `features/analytics/` (summary, bar-chart, spending-breakdown, category-report), `features/settings/` | No file over ~250 lines |
-| 1.4 | Extract pure logic to `lib/`: `money.ts` (paise ↔ INR, `money()`), `dates.ts` (`monthLabel`, month arithmetic, period → range), `aggregate.ts` (income/expense totals, breakdown, chart bucketing, category spend) | Each module is unit-tested and framework-free |
-| 1.5 | Move filter state (`query`, `typeFilter`, `catFilter`, `period`, `from`, `to`, `month`) into URL search params | Filtered views are shareable and survive refresh; the `navigate()` filter reset becomes a link without params |
-| 1.6 | Push static chrome to server components, keep interactive parts as client islands | Client bundle measurably smaller than today's baseline |
-| 1.7 | Write unit tests for all of `lib/` against current prototype behaviour **before** 1.4 lands | Tests pass against both the old and new code |
+| 1.1 | ✅ Real routes: `app/(app)/overview|transactions|analytics|budgets|categories|settings/page.tsx` and `app/(auth)/signin|signup|reset/page.tsx`. Replace the `page` state machine with the router; sidebar and mobile nav become `<Link>`s | Deep links work, browser back/forward works, refresh keeps you on the page |
+| 1.2 | ✅ Extract the shell into `components/app-shell/` (sidebar, topbar, mobile-nav, footer) as a layout | Layout renders once, not per page |
+| 1.3 | ✅ Extract feature components: `features/transactions/` (list, row, filter-bar, dialog), `features/categories/`, `features/budgets/`, `features/analytics/` (summary, bar-chart, spending-breakdown, category-report), `features/settings/` | No file over ~250 lines |
+| 1.4 | ✅ Extract pure logic to `lib/`: `money.ts` (paise ↔ INR, `money()`), `dates.ts` (`monthLabel`, month arithmetic, period → range), `aggregate.ts` (income/expense totals, breakdown, chart bucketing, category spend) | Each module is unit-tested and framework-free |
+| 1.5 | ✅ Move filter state (`query`, `typeFilter`, `catFilter`, `period`, `from`, `to`, `month`) into URL search params | Filtered views are shareable and survive refresh; the `navigate()` filter reset becomes a link without params |
+| 1.6 | ◐ Push static chrome to server components, keep interactive parts as client islands | Client bundle measurably smaller than today's baseline |
+| 1.7 | ✅ Write unit tests for all of `lib/` against current prototype behaviour **before** 1.4 lands | 44 tests, written first and unchanged by the extraction |
+
+**Deviation — 1.6 is partial.** Static chrome that *can* be a server component now is: the auth
+layout and its story panel, the auth pages, and [`app-footer.tsx`](../components/app-shell/app-footer.tsx).
+The six app pages remain client components because they read from the in-memory store — until
+Phase 2 gives them a server data source there is nothing to render on the server. Revisit as part
+of Phase 4.
+
+**Deviation — two Phase 6 fixes pulled forward.** Division-by-zero guards now live in
+[`money.ts`](../lib/money.ts) (`percentage`, `ratio`) and every call site uses them, closing 6.3;
+and `CategoryIcon`/`CategoryPill` tolerate a missing category, closing most of 6.1. Both were
+unavoidable — the extraction had to decide what the shared helpers do, and reproducing `NaN%`
+deliberately would have been perverse.
+
+**New state seam.** [`components/app-state.tsx`](../components/app-state.tsx) is the interface
+Phase 2 replaces: same shape, backed by `/api/*` instead of `useState`. No page or feature
+component touches the data directly, so swapping it should not reach them.
 
 ---
 
