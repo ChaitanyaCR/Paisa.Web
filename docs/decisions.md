@@ -16,8 +16,7 @@ binding constraints, not suggestions.
 
 ## D-001 · Password hashing — PBKDF2-HMAC-SHA256, 600,000 iterations
 
-**Status:** Accepted (technical), pending InfoSec confirmation that PBKDF2 is
-acceptable where argon2id is the house standard.
+**Status:** Accepted for V1 on 2026-09-12.
 
 Measured, not assumed. On 2026-09-12, 600,000 iterations of PBKDF2-HMAC-SHA256
 via WebCrypto:
@@ -41,8 +40,9 @@ Stored format is versioned (`pbkdf2$sha256$<iterations>$<salt>$<hash>`) so the
 iteration count can be raised, or the whole scheme swapped, with rehash-on-login
 rather than a forced reset.
 
-**If InfoSec requires argon2id:** it means a WASM dependency in the auth path.
-Raise it before Phase 3.1 — it changes the task, not just a constant.
+The user chose the built-in PBKDF2 implementation for V1 so authentication has
+no additional native dependency or external service. Revisit Argon2id only if a
+future organizational security standard requires it.
 
 ---
 
@@ -78,7 +78,7 @@ see the open items in D-008.
 
 ## D-003 · Session lifetime
 
-**Status:** Proposed.
+**Status:** Accepted 2026-09-12.
 
 | Parameter | Value | Reasoning |
 |---|---|---|
@@ -96,26 +96,18 @@ brings a much shorter idle timeout.
 
 ---
 
-## D-004 · Transactional email provider — Amazon SES (ap-south-1)
+## D-004 · No transactional email in V1; password resets are admin-assisted
 
-**Status:** Proposed, needs procurement sign-off. (No longer blocked on data
-region — D-002/D-008 resolved that.)
+**Status:** Accepted 2026-09-12. Supersedes the proposed Amazon SES integration.
 
-Only needed for password reset (task 3.4) and, later, email verification.
+V1 must not rely on an external system. Users therefore cannot request a reset
+link. An administrator assigns a temporary password in the local admin portal;
+the operation invalidates all of the target user's sessions, records an audit
+event, and forces the user to choose a new password at the next sign-in.
 
-Recommended: **Amazon SES in ap-south-1 (Mumbai)** — keeps recipient addresses and
-reset links processed inside India, consistent with D-008's residency decision
-for the database. Called over HTTPS from the Node server, so no SMTP support is
-required.
-
-Alternatives considered: Resend (best developer experience, but US/EU processing),
-Postmark (strong deliverability, US), Brevo (EU). All are fine technically; SES
-wins on data residency, which is the deciding factor here.
-
-Whichever is chosen, the API key is a secret supplied via the host's environment
-or secrets manager at deploy time — **never** `wrangler secret` (there is no
-Worker in this architecture; see D-008) and never a committed value or a
-tracked `.env` file.
+The first administrator is created through the one-time setup endpoint guarded
+by the local `ADMIN_SETUP_TOKEN`. Remove that environment value after bootstrap.
+No email provider, API key, reset token, or recipient address leaves the server.
 
 ---
 

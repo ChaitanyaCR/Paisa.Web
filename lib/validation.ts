@@ -55,6 +55,24 @@ export const settingsInputSchema = z
   })
   .refine((value) => Object.keys(value).length > 0);
 
+export const passwordSchema = z.string().min(8).max(128);
+export const signupSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
+  password: passwordSchema,
+});
+export const signinSchema = z.object({
+  email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
+  password: z.string().max(128),
+});
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().max(128),
+  newPassword: passwordSchema,
+});
+export const adminResetPasswordSchema = z.object({
+  temporaryPassword: passwordSchema,
+});
+
 export const transactionFiltersSchema = z.object({
   query: z.string().trim().max(100).optional(),
   type: kindSchema.optional(),

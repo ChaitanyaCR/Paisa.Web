@@ -2,7 +2,13 @@ import { z, type ZodType } from 'zod';
 import { getDb } from '@/lib/db/client';
 import { findSessionUser } from '@/lib/db/sessions';
 
-export type ApiUser = { id: string; name: string; email: string };
+export type ApiUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
+  mustChangePassword: boolean;
+};
 
 export function apiError(
   status: number,
@@ -16,17 +22,32 @@ export function apiError(
   );
 }
 
-export function requireUser(request: Request): ApiUser | Response {
+export function requireUser(
+  request: Request,
+  options: { allowPasswordChangeRequired?: boolean } = {},
+): ApiUser | Response {
+  const token = sessionToken(request);
+  if (!token)
+    return apiError(401, 'UNAUTHENTICATED', 'Authentication required');
+  const user = findSessionUser(getDb(), token);
+  if (!user) return apiError(401, 'UNAUTHENTICATED', 'Authentication required');
+  if (user.mustChangePassword && !options.allowPasswordChangeRequired)
+    return apiError(
+      403,
+      'PASSWORD_CHANGE_REQUIRED',
+      'You must change your temporary password',
+    );
+  return user;
+}
+
+export function sessionToken(request: Request): string | undefined {
   const cookie = request.headers.get('cookie') ?? '';
   const token = cookie
     .split(';')
     .map((part) => part.trim())
     .find((part) => part.startsWith('session='))
     ?.slice(8);
-  if (!token)
-    return apiError(401, 'UNAUTHENTICATED', 'Authentication required');
-  const user = findSessionUser(getDb(), decodeURIComponent(token));
-  return user ?? apiError(401, 'UNAUTHENTICATED', 'Authentication required');
+  return token ? decodeURIComponent(token) : undefined;
 }
 
 export async function parseJson<T>(

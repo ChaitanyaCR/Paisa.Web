@@ -6,18 +6,29 @@ export type NewUser = {
   name: string;
   email: string;
   passwordHash: string;
+  role?: UserRole;
+};
+
+export type UserRole = 'user' | 'admin';
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  mustChangePassword: boolean;
 };
 
 export function createUser(db: Database, input: NewUser) {
   const id = input.id ?? crypto.randomUUID();
   db.transaction(() => {
     db.prepare(
-      'INSERT INTO users (id, name, email, password_hash) VALUES (?, ?, ?, ?)',
+      'INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
     ).run(
       id,
       input.name.trim(),
       input.email.trim().toLowerCase(),
       input.passwordHash,
+      input.role ?? 'user',
     );
     const insert = db.prepare(
       'INSERT INTO categories (id, user_id, name, type, color) VALUES (?, ?, ?, ?, ?)',
@@ -37,4 +48,46 @@ export function createUser(db: Database, input: NewUser) {
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
   };
+}
+
+export function findUserByEmail(
+  db: Database,
+  email: string,
+): (User & { passwordHash: string }) | undefined {
+  const row = db
+    .prepare(
+      'SELECT id, name, email, role, must_change_password mustChangePassword, password_hash passwordHash FROM users WHERE email = ?',
+    )
+    .get(email.trim().toLowerCase()) as
+    | (Omit<User, 'mustChangePassword'> & {
+        mustChangePassword: number;
+        passwordHash: string;
+      })
+    | undefined;
+  return row && { ...row, mustChangePassword: Boolean(row.mustChangePassword) };
+}
+
+export function listUsers(db: Database): User[] {
+  const rows = db
+    .prepare(
+      'SELECT id, name, email, role, must_change_password mustChangePassword FROM users ORDER BY lower(name)',
+    )
+    .all() as Array<
+    Omit<User, 'mustChangePassword'> & { mustChangePassword: number }
+  >;
+  return rows.map((row) => ({
+    ...row,
+    mustChangePassword: Boolean(row.mustChangePassword),
+  }));
+}
+
+export function updatePassword(
+  db: Database,
+  userId: string,
+  passwordHash: string,
+  mustChangePassword: boolean,
+): void {
+  db.prepare(
+    "UPDATE users SET password_hash = ?, must_change_password = ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(passwordHash, Number(mustChangePassword), userId);
 }
