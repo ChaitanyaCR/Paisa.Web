@@ -10,11 +10,6 @@ import {
   Wallet,
 } from 'lucide-react';
 
-/**
- * Icons for the seed categories. Anything created through the UI gets a random
- * id and falls back to the generic tag — Phase 5.1 adds a stored icon and a
- * picker so user categories are not all identical.
- */
 const icons: Record<string, typeof Wallet> = {
   salary: BriefcaseBusiness,
   freelance: Laptop,
@@ -25,6 +20,17 @@ const icons: Record<string, typeof Wallet> = {
   health: Heart,
 };
 
-export function iconFor(categoryId: string): typeof Wallet {
-  return icons[categoryId] ?? Tags;
+export const categoryIconOptions = [
+  { value: 'tags', label: 'General' },
+  { value: 'salary', label: 'Work' },
+  { value: 'freelance', label: 'Computer' },
+  { value: 'home', label: 'Home' },
+  { value: 'food', label: 'Food' },
+  { value: 'shopping', label: 'Shopping' },
+  { value: 'transport', label: 'Transport' },
+  { value: 'health', label: 'Health' },
+] as const;
+
+export function iconFor(icon: string): typeof Wallet {
+  return icons[icon] ?? Tags;
 }

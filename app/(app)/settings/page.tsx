@@ -1,8 +1,10 @@
 'use client';
 
-import { Monitor, Moon, ShieldCheck, Sun } from 'lucide-react';
+import { Monitor, Moon, ShieldCheck, Sun, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { useAppState } from '@/components/app-state';
 import { useTheme } from '@/components/theme-provider';
 import { useAuthUser } from '@/components/auth-user';
@@ -14,10 +16,41 @@ const appearanceOptions = [
 ] as const;
 
 export default function SettingsPage() {
-  const { budgeting, setBudgeting, notify } = useAppState();
+  const { budgeting, setBudgeting } = useAppState();
   const { appearance, setAppearance } = useTheme();
   const user = useAuthUser();
   const initial = user?.name.trim().charAt(0).toUpperCase() || '?';
+  const [name, setName] = useState<string>();
+  const [password, setPassword] = useState('');
+  const [accountError, setAccountError] = useState('');
+  const saveName = async (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    const response = await fetch('/api/account', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: name ?? user?.name ?? '' }),
+    });
+    if (response.ok) window.location.reload();
+    else setAccountError('Your name could not be updated.');
+  };
+
+  const removeAccount = async () => {
+    if (
+      !window.confirm('Permanently delete your account and all financial data?')
+    )
+      return;
+    const response = await fetch('/api/account', {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (response.ok) window.location.assign('/signin');
+    else
+      setAccountError(
+        (await response.json().catch(() => null))?.error?.message ??
+          'Account deletion failed.',
+      );
+  };
 
   return (
     <div className="settings-layout">
@@ -42,6 +75,7 @@ export default function SettingsPage() {
             <p>All your entries and reports use Indian rupees.</p>
           </div>
           <strong>INR · ₹</strong>
+          <small className="fixed-setting">Fixed in V1</small>
         </div>
         <div className="setting-row">
           <div>
@@ -49,6 +83,7 @@ export default function SettingsPage() {
             <p>Your transaction dates stay as entered.</p>
           </div>
           <strong>Asia/Kolkata</strong>
+          <small className="fixed-setting">Fixed in V1</small>
         </div>
       </section>
 
@@ -71,14 +106,7 @@ export default function SettingsPage() {
           <Switch
             aria-label="Enable category budgeting"
             checked={budgeting}
-            onCheckedChange={(value) => {
-              setBudgeting(value);
-              notify(
-                value
-                  ? 'Category budgeting enabled'
-                  : 'Category budgeting turned off',
-              );
-            }}
+            onCheckedChange={(value) => void setBudgeting(value)}
           />
         </div>
         <div className="setting-row">
@@ -115,6 +143,53 @@ export default function SettingsPage() {
             Change password
           </Link>
         </div>
+        <form className="account-form" onSubmit={saveName}>
+          <label>
+            Display name
+            <Input
+              required
+              maxLength={80}
+              value={name ?? user?.name ?? ''}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <button className="secondary-action" type="submit">
+            Save name
+          </button>
+        </form>
+        <div className="setting-row">
+          <div>
+            <h4>Sign-in email</h4>
+            <p>{user?.email} · Fixed in V1 and cannot be changed.</p>
+          </div>
+        </div>
+        <div className="danger-zone">
+          <h4>Delete account</h4>
+          <p>
+            Permanently removes your account, transactions, categories, budgets,
+            and sessions.
+          </p>
+          <Input
+            type="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <button
+            className="secondary-action danger-action"
+            type="button"
+            disabled={!password}
+            onClick={() => void removeAccount()}
+          >
+            <Trash2 size={15} /> Delete account
+          </button>
+        </div>
+        {accountError && (
+          <p className="error" role="alert">
+            {accountError}
+          </p>
+        )}
       </section>
     </div>
   );

@@ -36,6 +36,18 @@ export const categoryInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   type: kindSchema,
   color: colorSchema,
+  icon: z
+    .enum([
+      'tags',
+      'salary',
+      'freelance',
+      'home',
+      'food',
+      'shopping',
+      'transport',
+      'health',
+    ])
+    .optional(),
 });
 
 export const categoryUpdateSchema = categoryInputSchema
@@ -71,6 +83,12 @@ export const changePasswordSchema = z.object({
 });
 export const adminResetPasswordSchema = z.object({
   temporaryPassword: passwordSchema,
+});
+export const accountUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
+export const accountDeleteSchema = z.object({
+  password: z.string().max(128),
 });
 
 export const transactionFiltersSchema = z.object({

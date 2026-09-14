@@ -4,27 +4,40 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useAppState } from '@/components/app-state';
 import { StatCards } from '@/features/overview/stat-cards';
-import { BudgetProgress, budgetRemainder } from '@/features/budgets/budget-progress';
+import {
+  BudgetProgress,
+  budgetRemainder,
+} from '@/features/budgets/budget-progress';
 import { TransactionList } from '@/features/transactions/transaction-list';
-import { budgetKey, buildBreakdown, categorySpend, inMonth, sumByType } from '@/lib/aggregate';
+import { budgetKey, buildBreakdown, inMonth, sumByType } from '@/lib/aggregate';
 import { monthLabel } from '@/lib/dates';
 import { money, percentage } from '@/lib/money';
 import { hrefWithMonth, useFilters } from '@/lib/use-filters';
 
 export default function OverviewPage() {
-  const { transactions, categories, budgets, budgeting } = useAppState();
+  const {
+    transactions,
+    categories,
+    budgets,
+    budgetSpending,
+    budgeting,
+    transactionTotals,
+  } = useAppState();
   const { month } = useFilters();
 
   const monthly = inMonth(transactions, month);
   const expense = sumByType(monthly, 'expense');
   const breakdown = buildBreakdown(categories, monthly);
   const budgeted = categories.filter(
-    (c) => c.type === 'expense' && !c.archived && budgets[budgetKey(month, c.id)] > 0,
+    (c) =>
+      c.type === 'expense' &&
+      !c.archived &&
+      budgets[budgetKey(month, c.id)] > 0,
   );
 
   return (
     <>
-      <StatCards transactions={monthly} />
+      <StatCards transactions={monthly} totals={transactionTotals} />
 
       {budgeting && (
         <section className="panel overview-budget">
@@ -40,9 +53,13 @@ export default function OverviewPage() {
           <div className="budget-mini-grid">
             {budgeted.map((c) => {
               const limit = budgets[budgetKey(month, c.id)];
-              const spent = categorySpend(monthly, c.id);
+              const spent = budgetSpending[budgetKey(month, c.id)] ?? 0;
               return (
-                <Link className="budget-mini" key={c.id} href={hrefWithMonth('/budgets', month)}>
+                <Link
+                  className="budget-mini"
+                  key={c.id}
+                  href={hrefWithMonth('/budgets', month)}
+                >
                   <span>
                     <strong>{c.name}</strong>
                     <small>{percentage(spent, limit)}%</small>
@@ -55,7 +72,8 @@ export default function OverviewPage() {
           </div>
           {!budgeted.length && (
             <p className="budget-empty">
-              No limits set for this month. Set your first category budget to see progress here.
+              No limits set for this month. Set your first category budget to
+              see progress here.
             </p>
           )}
         </section>
@@ -86,7 +104,10 @@ export default function OverviewPage() {
             <h3>Recent transactions</h3>
             <p>Your latest entries for {monthLabel(month)}.</p>
           </div>
-          <Link className="text-link" href={hrefWithMonth('/transactions', month)}>
+          <Link
+            className="text-link"
+            href={hrefWithMonth('/transactions', month)}
+          >
             View all <ArrowRight size={15} />
           </Link>
         </div>

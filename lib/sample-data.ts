@@ -6,13 +6,55 @@ import type { Budgets, Category, Transaction } from './types';
  */
 
 export const initialCategories: Category[] = [
-  { id: 'salary', name: 'Salary', type: 'income', color: '#53846e' },
-  { id: 'freelance', name: 'Freelance', type: 'income', color: '#799582' },
-  { id: 'home', name: 'Rent & bills', type: 'expense', color: '#427c65' },
-  { id: 'food', name: 'Food & groceries', type: 'expense', color: '#a1b88d' },
-  { id: 'shopping', name: 'Shopping', type: 'expense', color: '#e2b483' },
-  { id: 'transport', name: 'Transport', type: 'expense', color: '#9ca8bb' },
-  { id: 'health', name: 'Health & wellness', type: 'expense', color: '#bb9aa5' },
+  {
+    id: 'salary',
+    name: 'Salary',
+    type: 'income',
+    color: '#53846e',
+    icon: 'salary',
+  },
+  {
+    id: 'freelance',
+    name: 'Freelance',
+    type: 'income',
+    color: '#799582',
+    icon: 'freelance',
+  },
+  {
+    id: 'home',
+    name: 'Rent & bills',
+    type: 'expense',
+    color: '#427c65',
+    icon: 'home',
+  },
+  {
+    id: 'food',
+    name: 'Food & groceries',
+    type: 'expense',
+    color: '#a1b88d',
+    icon: 'food',
+  },
+  {
+    id: 'shopping',
+    name: 'Shopping',
+    type: 'expense',
+    color: '#e2b483',
+    icon: 'shopping',
+  },
+  {
+    id: 'transport',
+    name: 'Transport',
+    type: 'expense',
+    color: '#9ca8bb',
+    icon: 'transport',
+  },
+  {
+    id: 'health',
+    name: 'Health & wellness',
+    type: 'expense',
+    color: '#bb9aa5',
+    icon: 'health',
+  },
 ];
 
 export const categoryColors = [
@@ -44,7 +86,9 @@ export const initialTransactions: Transaction[] = [7, 8, 9].flatMap((month) =>
   seeds.map(([category, amount, day, notes], i) => ({
     id: `${month}-${i}`,
     category,
-    amount: Math.round(amount * (month === 9 ? 1 : month === 8 ? 0.91 : 0.86) * 100),
+    amount: Math.round(
+      amount * (month === 9 ? 1 : month === 8 ? 0.91 : 0.86) * 100,
+    ),
     date: `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
     notes: category === 'home' ? 'Monthly rent' : notes,
     type: (category === 'salary' || category === 'freelance'

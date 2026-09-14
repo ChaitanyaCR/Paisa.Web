@@ -7,6 +7,7 @@ import {
 } from '@/lib/api';
 import {
   categoryOwner,
+  deleteCategory,
   setCategoryArchived,
   updateCategory,
 } from '@/lib/db/categories';
@@ -37,6 +38,19 @@ export async function PATCH(request: Request, context: Context) {
         : updateCategory(getDb(), user.id, id, input);
     return result
       ? Response.json(result)
+      : forbiddenOrNotFound(categoryOwner(getDb(), id), user.id);
+  } catch (error) {
+    return mapDbError(error);
+  }
+}
+
+export async function DELETE(request: Request, context: Context) {
+  const user = requireUser(request);
+  if (isResponse(user)) return user;
+  const { id } = await Promise.resolve(context.params);
+  try {
+    return deleteCategory(getDb(), user.id, id)
+      ? new Response(null, { status: 204 })
       : forbiddenOrNotFound(categoryOwner(getDb(), id), user.id);
   } catch (error) {
     return mapDbError(error);

@@ -1,71 +1,126 @@
 'use client';
 
-import { useAppState } from '@/components/app-state';
+import { useEffect, useState } from 'react';
 import { CategoryReport } from '@/features/analytics/category-report';
 import { IncomeExpenseChart } from '@/features/analytics/bar-chart';
 import { SpendingBreakdown } from '@/features/analytics/spending-breakdown';
 import { FilterBar } from '@/features/transactions/filter-bar';
-import {
-  buildBreakdown,
-  buildCategoryReport,
-  buildChartData,
-  filterTransactions,
-  sumByType,
-} from '@/lib/aggregate';
-import { periodLabel } from '@/lib/dates';
+import type { AnalyticsResult } from '@/lib/db/analytics';
+import { lastDayOfMonth, periodLabel } from '@/lib/dates';
 import { money } from '@/lib/money';
 import { useFilters } from '@/lib/use-filters';
 
 export default function AnalyticsPage() {
-  const { transactions, categories } = useAppState();
   const filters = useFilters();
   const { period, month, from, to } = filters;
+  const [data, setData] = useState<AnalyticsResult | null>(null);
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
 
-  const filtered = filterTransactions(transactions, categories, filters);
-  const income = sumByType(filtered, 'income');
-  const expense = sumByType(filtered, 'expense');
+  useEffect(() => {
+    const params = new URLSearchParams({ period, month });
+    if (filters.query) params.set('query', filters.query);
+    if (filters.typeFilter !== 'all') params.set('type', filters.typeFilter);
+    if (filters.catFilter !== 'all') params.set('category', filters.catFilter);
+    if (period === 'year') {
+      params.set('from', `${month.slice(0, 4)}-01-01`);
+      params.set('to', `${month.slice(0, 4)}-12-31`);
+    } else if (period === 'custom') {
+      params.set('from', from);
+      params.set('to', to);
+    } else {
+      params.set('from', `${month}-01`);
+      params.set('to', lastDayOfMonth(month));
+    }
+    const controller = new AbortController();
+    fetch(`/api/analytics?${params}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error(
+            (await response.json().catch(() => null))?.error?.message ??
+              'Unable to load analytics.',
+          );
+        setData(await response.json());
+        setError('');
+      })
+      .catch((cause) => {
+        if (cause.name !== 'AbortError') setError(cause.message);
+      });
+    return () => controller.abort();
+  }, [
+    filters.catFilter,
+    filters.query,
+    filters.typeFilter,
+    from,
+    month,
+    period,
+    revision,
+    to,
+  ]);
 
   return (
     <>
       <FilterBar />
-      <div className="report-summary">
-        <span>
-          <small>INCOME</small>
-          <strong className="income-text">{money(income)}</strong>
-        </span>
-        <span>
-          <small>EXPENSES</small>
-          <strong className="expense-text">{money(expense)}</strong>
-        </span>
-        <span>
-          <small>NET SAVINGS</small>
-          <strong>{money(income - expense)}</strong>
-        </span>
-        <span>
-          <small>ENTRIES IN REPORT</small>
-          <strong>{filtered.length}</strong>
-        </span>
-      </div>
-      <div className="charts-grid">
-        <IncomeExpenseChart
-          data={buildChartData(filtered, period, month, from, to)}
-          periodLabel={
-            period === 'custom' ? 'Custom date range' : periodLabel(period, month, from, to)
-          }
-        />
-        <SpendingBreakdown
-          breakdown={buildBreakdown(categories, filtered)}
-          expense={expense}
-          month={month}
-        />
-      </div>
-      <CategoryReport
-        report={buildCategoryReport(categories, filtered)}
-        income={income}
-        expense={expense}
-        month={month}
-        hasEntries={filtered.length > 0}
-      />
+      {error && (
+        <div className="panel form-validation" role="alert">
+          <span>!</span>
+          {error}
+          <button
+            className="text-link"
+            onClick={() => setRevision((value) => value + 1)}
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {!data ? (
+        <div className="panel preview-note" role="status">
+          Loading analytics…
+        </div>
+      ) : (
+        <>
+          <div className="report-summary">
+            <span>
+              <small>INCOME</small>
+              <strong className="income-text">{money(data.income)}</strong>
+            </span>
+            <span>
+              <small>EXPENSES</small>
+              <strong className="expense-text">{money(data.expense)}</strong>
+            </span>
+            <span>
+              <small>NET SAVINGS</small>
+              <strong>{money(data.income - data.expense)}</strong>
+            </span>
+            <span>
+              <small>ENTRIES IN REPORT</small>
+              <strong>{data.count}</strong>
+            </span>
+          </div>
+          <div className="charts-grid">
+            <IncomeExpenseChart
+              data={data.chart}
+              periodLabel={
+                period === 'custom'
+                  ? 'Custom date range'
+                  : periodLabel(period, month, from, to)
+              }
+            />
+            <SpendingBreakdown
+              breakdown={data.breakdown}
+              expense={data.expense}
+              month={month}
+            />
+          </div>
+          <CategoryReport
+            report={data.report}
+            income={data.income}
+            expense={data.expense}
+            month={month}
+            hasEntries={data.count > 0}
+          />
+        </>
+      )}
     </>
   );
 }

@@ -5,7 +5,9 @@ export type Category = {
   name: string;
   type: Kind;
   color: string;
+  icon?: string;
   archived?: boolean;
+  transactionCount?: number;
 };
 
 export type Transaction = {

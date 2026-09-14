@@ -10,7 +10,7 @@ export function CategoryIcon({ category }: { category: Category | undefined }) {
     >
       {/* `createElement` rather than a capitalised local, so the React compiler
           can see this is a lookup and not a component defined during render. */}
-      {createElement(iconFor(category?.id ?? ''), { size: 19 })}
+      {createElement(iconFor(category?.icon ?? 'tags'), { size: 19 })}
     </span>
   );
 }

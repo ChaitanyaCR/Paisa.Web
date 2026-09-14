@@ -81,6 +81,12 @@ export function mapDbError(error: unknown): Response {
       'INVALID_CATEGORY',
       'Category does not exist or cannot be used',
     );
+  if (message === 'CATEGORY_IN_USE')
+    return apiError(
+      409,
+      'CATEGORY_IN_USE',
+      'Archive this category instead; it is used by transactions or budgets',
+    );
   if (message.includes('categories_user_type_name'))
     return apiError(
       422,

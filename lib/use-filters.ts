@@ -14,6 +14,7 @@ export type FilterState = {
   period: Period;
   from: string;
   to: string;
+  page: number;
 };
 
 /**
@@ -36,11 +37,12 @@ export function useFilters() {
       period: (searchParams.get('period') ?? 'month') as Period,
       from: searchParams.get('from') ?? `${month}-01`,
       to: searchParams.get('to') ?? lastDayOfMonth(month),
+      page: Math.max(1, Number(searchParams.get('page')) || 1),
     };
   }, [searchParams]);
 
   const setFilters = useCallback(
-    (patch: Partial<Record<keyof FilterState, string>>) => {
+    (patch: Partial<Record<keyof FilterState, string | number>>) => {
       const params = new URLSearchParams(searchParams);
       const keys: Record<keyof FilterState, string> = {
         month: 'month',
@@ -50,23 +52,28 @@ export function useFilters() {
         period: 'period',
         from: 'from',
         to: 'to',
+        page: 'page',
       };
       const defaults: Record<string, string> = {
         q: '',
         type: 'all',
         category: 'all',
         period: 'month',
+        page: '1',
       };
 
       for (const [key, value] of Object.entries(patch)) {
         const param = keys[key as keyof FilterState];
         // Keep the URL short: a filter at its default is simply absent.
-        if (value === undefined || value === defaults[param]) params.delete(param);
-        else params.set(param, value);
+        if (value === undefined || value === defaults[param])
+          params.delete(param);
+        else params.set(param, String(value));
       }
 
       const search = params.toString();
-      router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
+      router.replace(search ? `${pathname}?${search}` : pathname, {
+        scroll: false,
+      });
     },
     [pathname, router, searchParams],
   );
