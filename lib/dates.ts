@@ -49,6 +49,11 @@ export function todayKey(): string {
   return toDateKey(new Date());
 }
 
+/** The current calendar month as `YYYY-MM`, in local time. */
+export function currentMonth(): string {
+  return todayKey().slice(0, 7);
+}
+
 /** `2026-09-07` → `7 Sep`. Noon anchors the parse away from the date boundary. */
 export function formatDayMonth(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-IN', {

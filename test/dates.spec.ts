@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  currentMonth,
   formatDayMonth,
   formatFullDate,
   addDays,
@@ -99,5 +100,15 @@ describe('periodLabel', () => {
     expect(periodLabel('custom', '2026-09', '2026-09-01', '2026-09-15')).toBe(
       '2026-09-01 to 2026-09-15',
     );
+  });
+});
+
+describe('currentMonth', () => {
+  it('tracks the real calendar month rather than a fixed one', () => {
+    const now = new Date();
+    expect(currentMonth()).toBe(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+    );
+    expect(currentMonth()).toBe(toDateKey(now).slice(0, 7));
   });
 });

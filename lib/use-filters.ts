@@ -2,8 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
-import { lastDayOfMonth } from './dates';
-import { DEFAULT_MONTH } from './sample-data';
+import { currentMonth, lastDayOfMonth } from './dates';
 import type { Period } from './types';
 
 export type FilterState = {
@@ -28,7 +27,7 @@ export function useFilters() {
   const pathname = usePathname();
 
   const filters = useMemo<FilterState>(() => {
-    const month = searchParams.get('month') ?? DEFAULT_MONTH;
+    const month = searchParams.get('month') ?? currentMonth();
     return {
       month,
       query: searchParams.get('q') ?? '',
@@ -86,12 +85,12 @@ export function useFilters() {
  * component state while resetting the other filters; this reproduces that.
  */
 export function hrefWithMonth(href: string, month: string): string {
-  return month === DEFAULT_MONTH ? href : `${href}?month=${month}`;
+  return month === currentMonth() ? href : `${href}?month=${month}`;
 }
 
 /** A link that lands on the transactions page pre-filtered to one category. */
 export function categoryHref(categoryId: string, month: string): string {
   const params = new URLSearchParams({ category: categoryId });
-  if (month !== DEFAULT_MONTH) params.set('month', month);
+  if (month !== currentMonth()) params.set('month', month);
   return `/transactions?${params.toString()}`;
 }

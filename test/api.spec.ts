@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DELETE as deleteTransactionRoute } from '../app/api/transactions/[id]/route';
 import { POST as createTransactionRoute } from '../app/api/transactions/route';
+import { PATCH as patchCategoryRoute } from '../app/api/categories/[id]/route';
 import { GET as getSettingsRoute } from '../app/api/settings/route';
 import { POST as signinRoute } from '../app/api/auth/signin/route';
 import { POST as signupRoute } from '../app/api/auth/signup/route';
@@ -315,5 +316,47 @@ describe('Phase 2 routes', () => {
           .get('target') as { count: number }
       ).count,
     ).toBe(1);
+  });
+});
+
+describe('PATCH /api/categories/:id', () => {
+  const patch = (id: string, body: unknown) =>
+    patchCategoryRoute(
+      new Request(`http://localhost/api/categories/${id}`, {
+        method: 'PATCH',
+        headers: {
+          cookie: 'session=token-1',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }),
+      { params: { id } },
+    );
+
+  it('multiplexes archive and update from a single body read', async () => {
+    authenticatedUser('u1', 'token-1');
+    const category = listCategories(setupDb, 'u1')[0]!;
+
+    const archived = await patch(category.id, { archived: true });
+    expect(archived.status).toBe(200);
+    expect((await archived.json()).archived).toBe(true);
+
+    const renamed = await patch(category.id, { name: 'Renamed' });
+    expect(renamed.status).toBe(200);
+    const body = await renamed.json();
+    expect(body.name).toBe('Renamed');
+    // The rename must not have been read as an archive toggle.
+    expect(body.archived).toBe(true);
+
+    const restored = await patch(category.id, { archived: false });
+    expect((await restored.json()).archived).toBe(false);
+  });
+
+  it('rejects an empty patch and a non-boolean archive flag', async () => {
+    authenticatedUser('u1', 'token-1');
+    const category = listCategories(setupDb, 'u1')[0]!;
+
+    expect((await patch(category.id, {})).status).toBe(422);
+    expect((await patch(category.id, { archived: 'yes' })).status).toBe(422);
   });
 });

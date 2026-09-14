@@ -262,9 +262,14 @@ and deletion after launch is far more expensive. Data residency itself is resolv
 the app runs on India-hosted infrastructure with SQLite on the same host, specifically to avoid
 the Cloudflare D1 residency gap.
 
-**Sample data is seeded with a real-looking person** — `Chaitanya`, `chaitanya@example.com`, and
-33 transactions including salary figures, in [`lib/sample-data.ts`](../lib/sample-data.ts). Tasks
-2.7 and 3.8 remove it; make sure it never reaches a production database.
+**Sample data — resolved.** [`lib/sample-data.ts`](../lib/sample-data.ts) previously seeded a
+real-looking person (`Chaitanya`, `chaitanya@example.com`) and 33 transactions including salary
+figures. The fabricated transactions and budgets have been deleted; the module now exports only
+`initialCategories` (the starter categories `createUser()` gives every new account) and
+`categoryColors`. The frozen `DEFAULT_MONTH = '2026-09'` that backed the filter layer is gone
+too, replaced by `currentMonth()` in [`lib/dates.ts`](../lib/dates.ts). Do not reintroduce seed
+financial data into that module — anything exported from it is one step from a production
+database.
 
 **PBKDF2 versus argon2id** (task 3.1) is recorded in D-001 with real benchmark numbers (199ms on
 Node for 600k iterations). Node makes an argon2id swap straightforward if InfoSec requires it —

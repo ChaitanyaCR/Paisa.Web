@@ -1,8 +1,9 @@
-import type { Budgets, Category, Transaction } from './types';
+import type { Category } from './types';
 
 /**
- * Seed data for the prototype. Phase 2.7 replaces this: new accounts get the
- * starter categories only, never the sample transactions.
+ * Account seed data. A new account gets these starter categories and nothing
+ * else — the prototype's fabricated transactions and budgets were removed once
+ * real persistence landed, and must never be reintroduced here.
  */
 
 export const initialCategories: Category[] = [
@@ -67,43 +68,3 @@ export const categoryColors = [
   '#458259',
   '#ba5555',
 ];
-
-const seeds = [
-  ['salary', 85000, 1, 'Monthly salary'],
-  ['home', 18000, 2, 'September rent'],
-  ['food', 2450, 3, 'Weekly groceries'],
-  ['transport', 1200, 4, 'Fuel refill'],
-  ['freelance', 12500, 5, 'Website project'],
-  ['shopping', 3499, 6, 'A little wardrobe refresh'],
-  ['food', 850, 7, 'Dinner with friends'],
-  ['health', 1800, 8, 'Gym membership'],
-  ['food', 1620, 9, 'Groceries & essentials'],
-  ['transport', 340, 10, 'Cab to office'],
-  ['food', 420, 11, 'Coffee & lunch'],
-] as const;
-
-export const initialTransactions: Transaction[] = [7, 8, 9].flatMap((month) =>
-  seeds.map(([category, amount, day, notes], i) => ({
-    id: `${month}-${i}`,
-    category,
-    amount: Math.round(
-      amount * (month === 9 ? 1 : month === 8 ? 0.91 : 0.86) * 100,
-    ),
-    date: `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-    notes: category === 'home' ? 'Monthly rent' : notes,
-    type: (category === 'salary' || category === 'freelance'
-      ? 'income'
-      : 'expense') as Transaction['type'],
-  })),
-);
-
-export const initialBudgets: Budgets = {
-  '2026-09:home': 2000000,
-  '2026-09:food': 1000000,
-  '2026-09:shopping': 500000,
-  '2026-09:transport': 300000,
-  '2026-09:health': 200000,
-};
-
-/** The month the prototype opens on. */
-export const DEFAULT_MONTH = '2026-09';

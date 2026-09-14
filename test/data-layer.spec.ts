@@ -6,6 +6,7 @@ import {
   saveBudget,
 } from '../lib/db/budgets';
 import {
+  CATEGORY_NAME_INDEX,
   createCategory,
   deleteCategory,
   listCategories,
@@ -17,6 +18,7 @@ import {
   listTransactions,
 } from '../lib/db/transactions';
 import { createUser } from '../lib/db/users';
+import { createSession, findSessionUser } from '../lib/db/sessions';
 import { getAnalytics } from '../lib/db/analytics';
 import { freshDb } from './helpers';
 
@@ -252,5 +254,70 @@ describe('repositories', () => {
       amount: 0,
     });
     expect(deleteCategory(db, 'u1', category.id)).toBe(true);
+  });
+});
+
+describe('schema contract', () => {
+  // `mapDbError` turns a violation of this index into a 422 DUPLICATE_CATEGORY by
+  // matching SQLite's message. Renaming it in a migration would silently degrade
+  // that to a generic error, so the name is pinned here.
+  it('defines the unique index mapDbError matches on', () => {
+    db = freshDb();
+    expect(
+      db
+        .prepare(
+          "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?",
+        )
+        .get(CATEGORY_NAME_INDEX),
+    ).toBeTruthy();
+  });
+});
+
+describe('session activity tracking', () => {
+  const lastSeen = () =>
+    (
+      db.prepare('SELECT last_seen_at FROM sessions').get() as {
+        last_seen_at: string;
+      }
+    ).last_seen_at;
+
+  const setLastSeen = (value: string) =>
+    db.prepare('UPDATE sessions SET last_seen_at = ?').run(value);
+  const sqlTime = (offset: string) =>
+    (
+      db.prepare("SELECT datetime('now', ?) v").get(offset) as { v: string }
+    ).v;
+
+  it('does not write while last_seen_at is inside the throttle window', () => {
+    db = freshDb();
+    user('u1');
+    const token = createSession(db, 'u1');
+    // A distinct, recent sentinel: still fresh, so the row must be left alone.
+    const recent = sqlTime('-1 minute');
+    setLastSeen(recent);
+
+    expect(findSessionUser(db, token)?.id).toBe('u1');
+    expect(lastSeen()).toBe(recent);
+  });
+
+  it('refreshes last_seen_at once it is stale', () => {
+    db = freshDb();
+    user('u1');
+    const token = createSession(db, 'u1');
+    // Past the 5-minute throttle but well inside the 14-day idle window.
+    const stale = sqlTime('-1 hour');
+    setLastSeen(stale);
+
+    expect(findSessionUser(db, token)?.id).toBe('u1');
+    expect(lastSeen()).not.toBe(stale);
+  });
+
+  it('still expires a session idle beyond the 14-day window', () => {
+    db = freshDb();
+    user('u1');
+    const token = createSession(db, 'u1');
+    setLastSeen(sqlTime('-15 days'));
+
+    expect(findSessionUser(db, token)).toBeUndefined();
   });
 });

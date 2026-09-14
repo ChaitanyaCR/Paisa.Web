@@ -2,6 +2,13 @@ import type { Database } from 'better-sqlite3';
 import type { Category } from '@/lib/types';
 import type { CategoryInput } from '@/lib/validation';
 
+/**
+ * The unique index behind the "duplicate category" error. `mapDbError` matches
+ * SQLite's message against this name, so it lives here rather than as a literal
+ * at the HTTP edge; `test/data-layer.spec.ts` asserts the schema still defines it.
+ */
+export const CATEGORY_NAME_INDEX = 'categories_user_type_name';
+
 type CategoryRow = {
   id: string;
   name: string;

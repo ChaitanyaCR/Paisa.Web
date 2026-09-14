@@ -16,8 +16,11 @@ export function findSessionUser(
     | (Omit<SessionUser, 'mustChangePassword'> & { mustChangePassword: number })
     | undefined;
   if (!row) return undefined;
+  // This runs on every API call and every proxy-matched page request. Idle
+  // expiry has 14-day granularity, so refreshing at most once every five
+  // minutes keeps the sliding window accurate without a write per request.
   db.prepare(
-    "UPDATE sessions SET last_seen_at = datetime('now') WHERE token_hash = ?",
+    "UPDATE sessions SET last_seen_at = datetime('now') WHERE token_hash = ? AND last_seen_at < datetime('now', '-5 minutes')",
   ).run(hashSessionToken(token));
   return { ...row, mustChangePassword: Boolean(row.mustChangePassword) };
 }

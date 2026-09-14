@@ -16,19 +16,17 @@ import { categoryUpdateSchema } from '@/lib/validation';
 import { z } from 'zod';
 
 type Context = { params: Promise<{ id: string }> | { id: string } };
+
+// PATCH multiplexes two operations. `categoryUpdateSchema` strips unknown keys
+// and rejects an empty patch, so an `{ archived }` body can only match the first
+// member — the union is unambiguous and the body is read exactly once.
 const archiveSchema = z.object({ archived: z.boolean() });
+const patchSchema = z.union([archiveSchema, categoryUpdateSchema]);
 
 export async function PATCH(request: Request, context: Context) {
   const user = requireUser(request);
   if (isResponse(user)) return user;
-  const body: unknown = await request
-    .clone()
-    .json()
-    .catch(() => undefined);
-  const archive = archiveSchema.safeParse(body);
-  const input = archive.success
-    ? archive.data
-    : await parseJson(request, categoryUpdateSchema);
+  const input = await parseJson(request, patchSchema);
   if (isResponse(input)) return input;
   const { id } = await Promise.resolve(context.params);
   try {

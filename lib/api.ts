@@ -1,4 +1,5 @@
 import { z, type ZodType } from 'zod';
+import { CATEGORY_NAME_INDEX } from '@/lib/db/categories';
 import { getDb } from '@/lib/db/client';
 import { findSessionUser } from '@/lib/db/sessions';
 
@@ -100,7 +101,7 @@ export function mapDbError(error: unknown): Response {
       'CATEGORY_IN_USE',
       'Archive this category instead; it is used by transactions or budgets',
     );
-  if (message.includes('categories_user_type_name'))
+  if (message.includes(CATEGORY_NAME_INDEX))
     return apiError(
       422,
       'DUPLICATE_CATEGORY',
