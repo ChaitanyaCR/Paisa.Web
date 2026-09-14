@@ -550,14 +550,14 @@ h1 {
   overflow: hidden;
   border-radius: 4px;
 }
-.segmented-bar button {
+.segmented-bar :is(button, a) {
   border: 0;
   min-width: 3px;
 }
 .category-breakdown {
   margin-top: 20px;
 }
-.category-breakdown button {
+.category-breakdown :is(button, a) {
   border: 0;
   background: none;
   width: 100%;
@@ -567,7 +567,7 @@ h1 {
   padding: 9px 0;
   font-size: 11px;
 }
-.category-breakdown button > span {
+.category-breakdown :is(button, a) > span {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -796,6 +796,32 @@ input[type='date'] {
   align-items: center;
   gap: 10px;
 }
+/* Action buttons outside the dialogs are plain <button>/<a>, so they need the
+   button shell themselves; Fluent buttons already bring their own layout and
+   only take the colour treatment defined with the dialog rules. Colour is left
+   to inherit so modifiers like .danger-action still win. */
+.secondary-action:not(.fui-Button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+.secondary-action:not(.fui-Button):not(:disabled):not([aria-disabled='true']):hover {
+  background: var(--muted);
+  border-color: var(--primary);
+}
 .danger-action { color: var(--destructive); }
 .icon-field { margin: 18px 0; }
 .icon-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
@@ -930,6 +956,7 @@ input[type='date'] {
 }
 .account-buttons {
   display: flex;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   margin: 22px 0;
@@ -940,6 +967,8 @@ input[type='date'] {
 .danger-zone { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 20px; display: grid; gap: 10px; }
 .danger-zone p { font-size: 11px; }
 .danger-zone .fui-Input, .danger-zone input { max-width: 340px; }
+/* Grid items stretch by default; keep the action at its own width. */
+.danger-zone .secondary-action { justify-self: start; }
 .preview-note {
   font-size: 11px;
   color: var(--muted-foreground);
@@ -1533,7 +1562,7 @@ button:disabled {
   .bar-chart {
     height: 175px;
   }
-  .category-breakdown button {
+  .category-breakdown :is(button, a) {
     padding: 11px 0;
   }
   .table-head {
@@ -1592,7 +1621,7 @@ button:disabled {
     z-index: 30;
     justify-content: space-around;
   }
-  .mobile-nav button {
+  .mobile-nav :is(button, a) {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1604,10 +1633,10 @@ button:disabled {
     min-width: 47px;
     font-size: 8px;
   }
-  .mobile-nav button.active {
+  .mobile-nav :is(button, a).active {
     color: var(--primary);
   }
-  .mobile-nav button.active svg {
+  .mobile-nav :is(button, a).active svg {
     stroke-width: 2.4;
   }
   .filter-bar {
@@ -1930,7 +1959,7 @@ button:disabled {
 .category-report {
   margin-top: 20px;
 }
-.category-report button {
+.category-report :is(button, a) {
   width: 100%;
   display: flex;
   align-items: center;
@@ -1941,10 +1970,10 @@ button:disabled {
   border-bottom: 1px solid var(--border);
   text-align: left;
 }
-.category-report button:last-child {
+.category-report :is(button, a):last-child {
   border: 0;
 }
-.category-report button > span:nth-child(2) {
+.category-report :is(button, a) > span:nth-child(2) {
   min-width: 145px;
 }
 .category-report strong {
@@ -1957,11 +1986,11 @@ button:disabled {
   color: var(--muted-foreground);
   margin-top: 4px;
 }
-.category-report button > strong {
+.category-report :is(button, a) > strong {
   min-width: 95px;
   text-align: right;
 }
-.category-report button > small {
+.category-report :is(button, a) > small {
   min-width: 33px;
   text-align: right;
 }
@@ -1991,7 +2020,7 @@ button:disabled {
   .report-meter {
     margin: 0;
   }
-  .category-report button > span:nth-child(2) {
+  .category-report :is(button, a) > span:nth-child(2) {
     min-width: 120px;
   }
 }
@@ -2065,21 +2094,21 @@ button:disabled {
   .report-summary strong {
     font-size: 23px;
   }
-  .category-report button {
+  .category-report :is(button, a) {
     gap: 9px;
   }
-  .category-report button > span:nth-child(2) {
+  .category-report :is(button, a) > span:nth-child(2) {
     min-width: 0;
     flex: 1;
   }
-  .category-report button > strong {
+  .category-report :is(button, a) > strong {
     min-width: 75px;
     font-size: 11px;
   }
   .category-report .report-meter {
     display: none;
   }
-  .category-report button > small {
+  .category-report :is(button, a) > small {
     min-width: 27px;
     font-size: 9px;
   }
@@ -2087,7 +2116,7 @@ button:disabled {
     width: 29px;
     height: 29px;
   }
-  .category-report button > svg {
+  .category-report :is(button, a) > svg {
     display: none;
   }
 }

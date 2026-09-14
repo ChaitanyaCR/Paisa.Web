@@ -58,5 +58,19 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/api/:path*',
+    '/overview/:path*',
+    '/transactions/:path*',
+    '/analytics/:path*',
+    '/budgets/:path*',
+    '/categories/:path*',
+    '/settings/:path*',
+    '/change-password/:path*',
+    '/admin/:path*',
+    '/signin',
+    '/signup',
+    '/reset',
+    '/privacy',
+  ],
 };
