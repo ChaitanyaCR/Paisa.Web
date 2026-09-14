@@ -13,17 +13,17 @@
 
 ## 📍 Resume here (for a fresh session)
 
-**Current state:** Phases 0 and 1 are complete and committed. Phase 2 (data layer) is complete
-in the `feat/data-layer` working tree and awaiting commit. The app still runs on in-memory
-sample data via [`components/app-state.tsx`](../components/app-state.tsx); Phase 3 authentication
-is next, followed by Phase 4 replacing that state seam with the new APIs.
+**Current state:** Phases 0 and 1 are complete and committed. Phases 2 and 3 are complete in
+the `feat/data-layer` working tree and awaiting commit. The app still runs on in-memory sample
+financial data via [`components/app-state.tsx`](../components/app-state.tsx); Phase 4 replacing
+that state seam with the authenticated APIs is next.
 
-**Before writing any Phase 3 code:**
+**Before writing any Phase 4 code:**
 1. Read [`decisions.md`](decisions.md) in full — D-001 through D-009 are binding constraints,
    not suggestions. D-005 (integer paise) and D-008 (SQLite, not D1) especially.
 2. Run the full gate to confirm you're starting from a known-good state:
    `npm run lint && npm run typecheck && npm test && npm run build`
-3. Resolve D-003 and D-004's proposed decisions before implementing sessions and reset email.
+3. Preserve the user-scoped API boundary; never restore sample transactions into account data.
 
 **Do not re-introduce:** Cloudflare Workers, D1, `wrangler`, or any `@cloudflare/*` package —
 that path was deliberately abandoned in Phase 0 (D-002, D-008). If asked to "add D1" or "deploy
@@ -133,18 +133,21 @@ inputs, session lookup provides the Phase 3 auth seam, and route tests cover 401
 
 ---
 
-## Phase 3 — Authentication
+## Phase 3 — Authentication ✅
 
-The design defines three auth screens ([`features/settings/auth-form.tsx`](../features/settings/auth-form.tsx),
-routed at `/signin`, `/signup`, `/reset`) that currently only show a "layout preview" notice. This
-phase makes them real.
+**Done in the working tree.** Signup, signin, signout, session protection, password changes,
+rate limits, real identity rendering, and admin-assisted resets are implemented. Per D-004,
+the reset-link flow was replaced by a local admin portal and forced password change.
+Rate limits use a 15-minute in-process window: sign-up 5/IP, sign-in 10/IP and 5/account,
+password change 5/user/IP, and admin reset 10/admin/IP. A future multi-process deployment
+must replace the in-memory counter with a shared store before scaling beyond one server.
 
 | # | Task | Acceptance |
 |---|---|---|
 | 3.1 | Password hashing via WebCrypto PBKDF2-HMAC-SHA256, 600k iterations (measured at 199 ms on Node — D-001), per-user random salt, versioned hash string to allow future rehashing. The runtime is Node, so argon2id is a drop-in native module if InfoSec prefers it | Unit tests cover hash, verify, and rehash-on-login |
 | 3.2 | Sign-up: name, email, password ≥8 characters. Normalise and validate email, reject duplicates without revealing account existence, create user + default categories + settings in one transaction | `POST /api/auth/signup` creates the account and signs the user in |
 | 3.3 | Sign-in: constant-time verification, opaque session token, `HttpOnly` `Secure` `SameSite=Lax` cookie, server-side session row with expiry and rotation on login (see D-003 for the exact lifetimes) | Wrong password and unknown email are indistinguishable in both response and timing |
-| 3.4 | Password reset: single-use, hashed, short-TTL token; email delivery via the provider in D-004 (Amazon SES, ap-south-1); **plus a `/reset/[token]` completion screen the design omits** (today `/reset` only requests the link); always respond "if that email exists…" | Full flow works: request → email → set new password → all existing sessions invalidated |
+| 3.4 | Admin-assisted password reset per D-004: assign a temporary password, invalidate all existing sessions, record an audit event, and force a password change at next sign-in | Full flow works without email or another external system |
 | 3.5 | **Sign-out.** There is currently no way out of the app — no sign-out control exists anywhere in the shell. Add it to the sidebar profile menu ([`components/app-shell/sidebar.tsx`](../components/app-shell/sidebar.tsx)) | Session row deleted, cookie cleared, redirect to `/signin` |
 | 3.6 | Route protection: middleware redirecting unauthenticated users to `/signin` and authenticated users away from the `(auth)` route group | No `(app)` route renders data without a valid session |
 | 3.7 | Rate limiting on sign-in, sign-up and reset (per IP and per account) | Brute force is throttled; thresholds documented |
@@ -242,13 +245,13 @@ and Phase 6.6's chart replacement; run them before and after either change.
 ## Sequencing
 
 ```
-Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ✅ ──► Phase 3 ──► Phase 4 ──► Phase 5
+Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ✅ ──► Phase 3 ✅ ──► Phase 4 ──► Phase 5
                                   │                        │
                                   └──► Phase 6 (parallel) ◄┘
                                              │
                                              └──► Phase 7 (7.6 already active since Phase 0)
 ```
 
-Phase 3 is next. Phases 0–4 are the critical path — completing them is the point
+Phase 4 is next. Phases 0–4 are the critical path — completing them is the point
 at which every feature in the design is genuinely functional. Phase 5 closes the gaps the
 prototype hides, Phase 6 can run alongside Phase 4, and Phase 7 gates launch.

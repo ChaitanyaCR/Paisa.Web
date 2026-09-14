@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
 import { useAppState } from '@/components/app-state';
 import { useTheme } from '@/components/theme-provider';
+import { useAuthUser } from '@/components/auth-user';
 
 const appearanceOptions = [
   { value: 'light', icon: Sun },
@@ -15,6 +16,8 @@ const appearanceOptions = [
 export default function SettingsPage() {
   const { budgeting, setBudgeting, notify } = useAppState();
   const { appearance, setAppearance } = useTheme();
+  const user = useAuthUser();
+  const initial = user?.name.trim().charAt(0).toUpperCase() || '?';
 
   return (
     <div className="settings-layout">
@@ -27,12 +30,10 @@ export default function SettingsPage() {
           <ShieldCheck size={21} />
         </div>
         <div className="account-details">
-          <span className="avatar large">C</span>
+          <span className="avatar large">{initial}</span>
           <div>
-            <h3>Chaitanya</h3>
-            <p>
-              chaitanya@example.com <span className="small-tag">Sample account</span>
-            </p>
+            <h3>{user?.name ?? 'Your account'}</h3>
+            <p>{user?.email ?? 'Loading…'}</p>
           </div>
         </div>
         <div className="setting-row">
@@ -72,7 +73,11 @@ export default function SettingsPage() {
             checked={budgeting}
             onCheckedChange={(value) => {
               setBudgeting(value);
-              notify(value ? 'Category budgeting enabled' : 'Category budgeting turned off');
+              notify(
+                value
+                  ? 'Category budgeting enabled'
+                  : 'Category budgeting turned off',
+              );
             }}
           />
         </div>
@@ -101,25 +106,15 @@ export default function SettingsPage() {
       <section className="panel settings-card">
         <div className="panel-heading">
           <div>
-            <h3>Account screen previews</h3>
-            <p>Review the sign-in, registration, and password reset layouts.</p>
+            <h3>Account security</h3>
+            <p>Manage your password and active session.</p>
           </div>
         </div>
         <div className="account-buttons">
-          <Link className="secondary-action" href="/signin">
-            Preview sign in
-          </Link>
-          <Link className="secondary-action" href="/signup">
-            Preview registration
-          </Link>
-          <Link className="secondary-action" href="/reset">
-            Preview password reset
+          <Link className="secondary-action" href="/change-password">
+            Change password
           </Link>
         </div>
-        <p className="preview-note">
-          This review uses sample data in memory. Changes reset when the page reloads.
-          Authentication and cross-device sync are not connected yet.
-        </p>
       </section>
     </div>
   );

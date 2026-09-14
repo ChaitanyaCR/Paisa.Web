@@ -6,7 +6,7 @@ export function AppFooter() {
       <span>
         <Leaf size={13} /> A little more mindful. A little more yours.
       </span>
-      <span>INR · Sample data for review</span>
+      <span>INR · Private by default</span>
     </footer>
   );
 }

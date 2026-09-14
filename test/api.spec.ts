@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DELETE as deleteTransactionRoute } from '../app/api/transactions/[id]/route';
 import { POST as createTransactionRoute } from '../app/api/transactions/route';
 import { GET as getSettingsRoute } from '../app/api/settings/route';
+import { POST as signinRoute } from '../app/api/auth/signin/route';
+import { POST as signupRoute } from '../app/api/auth/signup/route';
+import { POST as adminResetRoute } from '../app/api/admin/users/[id]/reset-password/route';
+import { clearRateLimits } from '../lib/auth/rate-limit';
+import { hashPassword } from '../lib/auth/password';
 import { closeDb } from '../lib/db/client';
 import { listCategories } from '../lib/db/categories';
 import { hashSessionToken } from '../lib/db/sessions';
@@ -26,6 +31,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  clearRateLimits();
   closeDb();
   setupDb.close();
   delete process.env.DATABASE_PATH;
@@ -113,5 +119,85 @@ describe('Phase 2 routes', () => {
       { params: { id: item.id } },
     );
     expect(response.status).toBe(403);
+  });
+
+  it('signs up and signs in with an opaque secure cookie', async () => {
+    const signup = await signupRoute(
+      new Request('http://localhost/api/auth/signup', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Asha',
+          email: 'ASHA@example.com',
+          password: 'a-secure-password',
+        }),
+      }),
+    );
+    expect(signup.status).toBe(201);
+    expect(signup.headers.get('set-cookie')).toContain(
+      'HttpOnly; Secure; SameSite=Lax',
+    );
+    const signin = await signinRoute(
+      new Request('http://localhost/api/auth/signin', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: 'asha@example.com',
+          password: 'a-secure-password',
+        }),
+      }),
+    );
+    expect(signin.status).toBe(200);
+  });
+
+  it('allows only admins to reset a password and invalidates target sessions', async () => {
+    createUser(setupDb, {
+      id: 'admin',
+      name: 'Admin',
+      email: 'admin@example.com',
+      passwordHash: await hashPassword('admin-password'),
+      role: 'admin',
+    });
+    authenticatedUser('target', 'target-token');
+    setupDb
+      .prepare(
+        "INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES ('admin-session', 'admin', ?, datetime('now', '+1 day'))",
+      )
+      .run(hashSessionToken('admin-token'));
+    const response = await adminResetRoute(
+      new Request('http://localhost/api/admin/users/target/reset-password', {
+        method: 'POST',
+        headers: {
+          cookie: 'session=admin-token',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ temporaryPassword: 'temporary-password' }),
+      }),
+      { params: { id: 'target' } },
+    );
+    expect(response.status).toBe(204);
+    expect(
+      (
+        setupDb
+          .prepare('SELECT must_change_password value FROM users WHERE id = ?')
+          .get('target') as { value: number }
+      ).value,
+    ).toBe(1);
+    expect(
+      (
+        setupDb
+          .prepare('SELECT count(*) count FROM sessions WHERE user_id = ?')
+          .get('target') as { count: number }
+      ).count,
+    ).toBe(0);
+    expect(
+      (
+        setupDb
+          .prepare(
+            'SELECT count(*) count FROM admin_audit_log WHERE target_user_id = ?',
+          )
+          .get('target') as { count: number }
+      ).count,
+    ).toBe(1);
   });
 });

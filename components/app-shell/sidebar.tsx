@@ -1,16 +1,19 @@
 'use client';
 
-import { Leaf, Settings } from 'lucide-react';
+import { Leaf, LogOut, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAppState } from '@/components/app-state';
 import { hrefWithMonth, useFilters } from '@/lib/use-filters';
 import { navItems } from '@/lib/navigation';
+import { useAuthUser } from '@/components/auth-user';
 
 export function Sidebar() {
   const pathname = usePathname();
   const { budgeting } = useAppState();
   const { month } = useFilters();
+  const user = useAuthUser();
+  const initial = user?.name.trim().charAt(0).toUpperCase() || '?';
 
   return (
     <aside className="sidebar">
@@ -46,14 +49,28 @@ export function Sidebar() {
           <h4>Small steps. More clarity.</h4>
           <p>A quick daily check-in goes a long way.</p>
         </div>
+        {user?.role === 'admin' && (
+          <Link className="nav-item" href="/admin/users">
+            <Users size={19} /> <span>Administration</span>
+          </Link>
+        )}
         <Link className="profile" href="/settings">
-          <span className="avatar">C</span>
+          <span className="avatar">{initial}</span>
           <span>
-            <strong>Chaitanya</strong>
+            <strong>{user?.name ?? 'Account'}</strong>
             <small>Personal account</small>
           </span>
           <Settings size={17} />
         </Link>
+        <button
+          className="secondary-action"
+          onClick={async () => {
+            await fetch('/api/auth/signout', { method: 'POST' });
+            window.location.assign('/signin');
+          }}
+        >
+          <LogOut size={16} /> Sign out
+        </button>
       </div>
     </aside>
   );
