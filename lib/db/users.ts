@@ -7,6 +7,7 @@ export type NewUser = {
   email: string;
   passwordHash: string;
   role?: UserRole;
+  consent?: boolean;
 };
 
 export type UserRole = 'user' | 'admin';
@@ -22,13 +23,15 @@ export function createUser(db: Database, input: NewUser) {
   const id = input.id ?? crypto.randomUUID();
   db.transaction(() => {
     db.prepare(
-      'INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
+      "INSERT INTO users (id, name, email, password_hash, role, consented_at, privacy_version) VALUES (?, ?, ?, ?, ?, CASE WHEN ? THEN datetime('now') END, CASE WHEN ? THEN '2026-09-v1' END)",
     ).run(
       id,
       input.name.trim(),
       input.email.trim().toLowerCase(),
       input.passwordHash,
       input.role ?? 'user',
+      Number(input.consent ?? false),
+      Number(input.consent ?? false),
     );
     const insert = db.prepare(
       'INSERT INTO categories (id, user_id, name, type, color, icon) VALUES (?, ?, ?, ?, ?, ?)',

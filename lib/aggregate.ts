@@ -1,4 +1,4 @@
-import { reportRange } from './dates';
+import { addDays, reportRange } from './dates';
 import type { Category, Kind, Period, Transaction } from './types';
 
 export type Filters = {
@@ -12,7 +12,10 @@ export type Filters = {
 };
 
 /** Transactions inside the selected month, ignoring the other filters. */
-export function inMonth(transactions: Transaction[], month: string): Transaction[] {
+export function inMonth(
+  transactions: Transaction[],
+  month: string,
+): Transaction[] {
   return transactions.filter((t) => t.date.startsWith(month));
 }
 
@@ -37,14 +40,18 @@ export function filterTransactions(
         inPeriod &&
         (typeFilter === 'all' || t.type === typeFilter) &&
         (catFilter === 'all' || t.category === catFilter) &&
-        `${t.notes} ${category?.name}`.toLowerCase().includes(query.toLowerCase())
+        `${t.notes} ${category?.name}`
+          .toLowerCase()
+          .includes(query.toLowerCase())
       );
     })
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export function sumByType(list: Transaction[], type: Kind): number {
-  return list.filter((t) => t.type === type).reduce((sum, t) => sum + t.amount, 0);
+  return list
+    .filter((t) => t.type === type)
+    .reduce((sum, t) => sum + t.amount, 0);
 }
 
 export function countByType(list: Transaction[], type: Kind): number {
@@ -94,9 +101,8 @@ export type ChartBar = { label: string; income: number; expense: number };
  * Buckets the period into bars: twelve months for a yearly view, otherwise up to
  * four even slices of the range.
  *
- * The `toISOString().slice(0, 10)` below is the prototype's own bucketing and is
- * UTC-based, so in IST a bucket boundary can land on the previous day. Preserved
- * deliberately; Phase 6.2 replaces it.
+ * Calendar keys are advanced without reading the viewer's timezone, so a
+ * transaction always stays in the date bucket the user entered.
  */
 export function buildChartData(
   list: Transaction[],
@@ -108,29 +114,32 @@ export function buildChartData(
   const groups =
     period === 'year'
       ? Array.from({ length: 12 }, (_, i) => ({
-          label: new Date(2026, i, 1).toLocaleDateString('en-IN', { month: 'short' }),
+          label: new Intl.DateTimeFormat('en-IN', {
+            month: 'short',
+            timeZone: 'UTC',
+          }).format(new Date(Date.UTC(Number(month.slice(0, 4)), i, 1))),
           entries: list.filter((t) => Number(t.date.slice(5, 7)) === i + 1),
         }))
       : (() => {
           const { start, days } = reportRange(period, month, from, to);
           const buckets = Math.min(4, days);
           return Array.from({ length: buckets }, (_, i) => {
-            const sliceStart = new Date(
-              Date.parse(start) + Math.floor((i * days) / buckets) * 86400000,
-            )
-              .toISOString()
-              .slice(0, 10);
-            const sliceEnd = new Date(
-              Date.parse(start) + Math.floor(((i + 1) * days) / buckets) * 86400000,
-            )
-              .toISOString()
-              .slice(0, 10);
+            const sliceStart = addDays(start, Math.floor((i * days) / buckets));
+            const sliceEnd = addDays(
+              start,
+              Math.floor(((i + 1) * days) / buckets),
+            );
             return {
-              label: new Date(`${sliceStart}T12:00:00`).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-              }),
-              entries: list.filter((t) => t.date >= sliceStart && t.date < sliceEnd),
+              label: new Date(`${sliceStart}T12:00:00`).toLocaleDateString(
+                'en-IN',
+                {
+                  day: 'numeric',
+                  month: 'short',
+                },
+              ),
+              entries: list.filter(
+                (t) => t.date >= sliceStart && t.date < sliceEnd,
+              ),
             };
           });
         })();

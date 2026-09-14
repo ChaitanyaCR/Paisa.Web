@@ -13,10 +13,24 @@
 
 ## 📍 Resume here (for a fresh session)
 
-**Current state:** Phases 0 and 1 are complete and committed. Phases 2, 3, and 5 plus Phase 4's
-functional work are complete in the `feat/data-layer` working tree and awaiting commit. Account
-data is loaded and mutated through authenticated APIs; the sample financial-data store has been
-removed. The remaining Phase 4 work is the optional server-component bundle optimization.
+**Current state:** Phases 0 and 1 are complete and committed. Phases 2, 3, 5, and 6 plus Phase
+4's functional work are complete in the `feat/data-layer` working tree and awaiting commit.
+Account data is loaded and mutated through authenticated APIs; the sample financial-data store has
+been removed. The remaining Phase 4 work is the optional server-component bundle optimization.
+
+### What remains
+
+1. **Optional repository optimization:** complete Phase 1.6 / Phase 4 server-component work only
+   after measuring a meaningful client-bundle reduction. Functional product work is otherwise
+   complete.
+2. **Browser QA:** verify keyboard/focus/contrast behaviour and responsive layouts at 360, 768,
+   1024, and 1440 px.
+3. **Launch operations:** complete every item in [`launch-checklist.md`](launch-checklist.md):
+   TLS, encrypted/tested backups, grievance contact, retention and incident procedures, and
+   privacy-safe observability.
+4. **Scale prerequisite:** replace in-process rate limits with a shared store before running more
+   than one application process.
+5. **Version-control handoff:** review and commit the currently uncommitted Phase 2–7 work.
 
 **Before continuing implementation:**
 1. Read [`decisions.md`](decisions.md) in full — D-001 through D-009 are binding constraints,
@@ -39,8 +53,8 @@ entire product: 6 pages, 4 dialogs, 3 auth screens, charts, filters and toasts �
 `useState` over seeded sample data. Phase 1 broke it into 29 files (largest 221 lines); the old
 `app/page.tsx` is now a 5-line redirect to `/overview`. The product underneath it is now real:
 authenticated, user-scoped SQLite persistence backs the financial screens and settings. The
-remaining work is correctness, production hardening, compliance operations, and the optional
-server-component optimization tracked in Phase 4.
+remaining work is launch hardening, browser QA, and the optional server-component optimization
+tracked in Phase 4.
 
 So "implement every feature in the design" means: keep the UI, build the product underneath it,
 and close the gaps the prototype papers over.
@@ -196,34 +210,42 @@ Currency and timezone are explicitly labelled fixed rather than presented as edi
 
 ---
 
-## Phase 6 — Correctness fixes
+## Phase 6 — Correctness fixes ✅
 
-Two of these (6.1 partially, 6.3 fully) were already closed as a side effect of Phase 1 — see
-the deviation notes under Phase 1. The rest are open.
+**Done.** Date-only values are now handled as calendar keys, avoiding timezone shifts in chart
+buckets and month navigation. The month control uses broadly supported native selects instead of
+`input[type=month]`. The analytics chart now uses Recharts, and server pagination already caps
+transaction lists.
 
 | # | Issue | Location |
 |---|---|---|
-| 6.1 | ~~Unsafe category lookup~~ — **closed for shared components** in Phase 1 (`getCategory` returns `Category \| undefined`, `CategoryIcon`/`CategoryPill` handle it). Re-check `features/analytics/category-report.tsx` and the budgets/categories pages if their category source ever stops being a pre-filtered array | `components/category-icon.tsx`, `components/app-state.tsx` |
-| 6.2 | Timezone bugs: chart bucketing in `buildChartData` uses `new Date(...).toISOString().slice(0,10)`, which in IST shifts dates across bucket boundaries; the `new Date(month + '-02')` pattern used throughout parses as UTC | [`lib/aggregate.ts`](../lib/aggregate.ts) (`buildChartData`), [`lib/dates.ts`](../lib/dates.ts) (`monthLabel`, `moveMonth`) |
-| 6.3 | ~~Division by zero~~ — **closed in Phase 1.** `percentage()`/`ratio()` in `lib/money.ts` guard the zero case; every call site uses them | [`lib/money.ts`](../lib/money.ts) |
-| 6.4 | `<input type="month">` is unsupported in Safari — the month picker is dead on iOS and macOS Safari | [`components/app-shell/page-heading.tsx`](../components/app-shell/page-heading.tsx) |
-| 6.5 | Client-generated `crypto.randomUUID()` ids become server-assigned | `components/app-state.tsx` (`saveTransaction`, `saveCategory`) — resolved naturally by Phase 4's API wiring |
-| 6.6 | Replace the hand-rolled `<div>` bar chart with Recharts — already a dependency, and [`components/ui/chart.tsx`](../components/ui/chart.tsx) exists unused. Gains accessible tooltips and real axes | [`features/analytics/bar-chart.tsx`](../features/analytics/bar-chart.tsx) |
-| 6.7 | Long lists need virtualization or capped pagination — the design renders every matching row | [`features/transactions/transaction-list.tsx`](../features/transactions/transaction-list.tsx) — largely subsumed by Phase 4.2's server-side pagination |
+| 6.1 | ✅ Safe category lookup | Shared components render an absent category safely |
+| 6.2 | ✅ Timezone-safe calendar math and chart buckets | No UTC conversion changes an entered transaction date |
+| 6.3 | ✅ Division-by-zero guards | Ratios and percentages handle zero safely |
+| 6.4 | ✅ Safari-compatible month selector | Native month and year selects replace `input[type=month]` |
+| 6.5 | ✅ Server-assigned identifiers | API routes assign IDs on create |
+| 6.6 | ✅ Recharts bar chart with axes and tooltip | Reuses [`components/ui/chart.tsx`](../components/ui/chart.tsx) |
+| 6.7 | ✅ Capped transaction pagination | The API defaults to 25 rows and caps at 100 |
 
 ---
 
-## Phase 7 — Quality, security, compliance
+## Phase 7 — Quality, security, compliance ◐
+
+**Application work is implemented; launch operations remain.** The app has consent capture,
+portable account export, cascading deletion, same-origin protection for authenticated mutations,
+and security response headers. Route-level integration tests cover the full local happy path and
+cross-user isolation. See [`launch-checklist.md`](launch-checklist.md) for the host, operational,
+and legal actions that engineering cannot complete from this repository.
 
 | # | Task |
 |---|---|
-| 7.1 | Accessibility audit. The design is already careful (`aria-label`, `role="progressbar"`, `role="alert"`, `role="status"`). Verify focus traps in dialogs (`components/dialogs/`), focus return on close, keyboard reachability of the segmented bar and category-report buttons, colour contrast for user-chosen category colours, and correct toast announcement |
-| 7.2 | Responsive verification at 360 / 768 / 1024 / 1440 px — mobile nav, `mobile-category-badge` and `mobile-avatar` paths |
-| 7.3 | Security headers (CSP, HSTS, `X-Content-Type-Options`), CSRF protection on mutating routes, secrets supplied only via environment/secrets manager on the host — **never** `wrangler secret` (there is no Worker — see D-008) |
-| 7.4 | Integration tests: auth flows, per-user data isolation (user A cannot read or write user B's data), budget month boundaries, aggregation correctness |
-| 7.5 | End-to-end happy path: sign up → add transaction → set budget → view analytics → sign out |
-| 7.6 | **DPDP Act 2023 compliance** — see Risks below |
-| 7.7 | Observability: structured logs (no PII, no amounts), error tracking, SQLite query timing |
+| 7.1 | ◐ Static accessibility review complete: dialog primitive supplies focus handling; controls have labels and status messages | Browser-assisted keyboard and contrast verification remains in the launch checklist |
+| 7.2 | ⏳ Responsive browser verification at 360 / 768 / 1024 / 1440 px | Requires a browser QA pass |
+| 7.3 | ✅ CSP, HSTS in production, anti-framing/type-sniffing/referrer/permissions headers, and same-origin authenticated writes | Host still supplies TLS and secrets management; no Workers configuration |
+| 7.4 | ✅ Integration tests cover auth, isolation, month boundaries, export, and aggregation | 63 tests total |
+| 7.5 | ✅ Route-level end-to-end happy path | Sign-up → transaction → budget → analytics → sign-out |
+| 7.6 | ◐ Consent, privacy notice, export, and deletion implemented | Grievance contact, retention, backup, and breach procedures require the operator |
+| 7.7 | ⏳ Privacy-safe production logging, error tracking, and query timing | Requires selection/configuration of a local host-side destination |
 
 ---
 
@@ -259,11 +281,10 @@ and Phase 6.6's chart replacement; run them before and after either change.
 ```
 Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ✅ ──► Phase 3 ✅ ──► Phase 4 ◐ ──► Phase 5 ✅
                                   │                        │
-                                  └──► Phase 6 (parallel) ◄┘
+                                  └──► Phase 6 ✅ (parallel) ◄┘
                                              │
-                                             └──► Phase 7 (7.6 already active since Phase 0)
+                                             └──► Phase 7 ◐
 ```
 
-Phase 4's server-component optimization is the remaining critical-path item. Completing it is the point
-at which every feature in the design is genuinely functional. Phase 5 closes the gaps the
-prototype hides, Phase 6 can run alongside Phase 4, and Phase 7 gates launch.
+Phase 4's server-component optimization is the only remaining product optimization. Phase 7's
+operational accessibility, backup, compliance, and observability gates must close before launch.

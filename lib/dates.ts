@@ -1,24 +1,42 @@
 import type { Period } from './types';
 
-/**
- * Date handling here reproduces the prototype exactly, quirks included — the
- * `new Date('2026-09-02')` parses below are UTC, so they shift in IST. Phase 6.2
- * fixes that; Phase 1 only moves the code.
- */
+const monthNames = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+function monthParts(month: string): [number, number] {
+  return [Number(month.slice(0, 4)), Number(month.slice(5, 7))];
+}
 
 /** `2026-09` → `September 2026`. */
 export function monthLabel(month: string): string {
-  return new Date(`${month}-02`).toLocaleDateString('en-IN', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const [year, monthNumber] = monthParts(month);
+  return `${monthNames[monthNumber - 1]} ${year}`;
 }
 
 /** `2026-09` shifted by `direction` months. */
 export function moveMonth(month: string, direction: number): string {
-  const date = new Date(`${month}-02`);
-  date.setMonth(date.getMonth() + direction);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  const [year, monthNumber] = monthParts(month);
+  const index = year * 12 + monthNumber - 1 + direction;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
+}
+
+/** Adds calendar days to a YYYY-MM-DD key without reading the local timezone. */
+export function addDays(date: string, days: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day + days));
+  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`;
 }
 
 /** A `Date` → the `YYYY-MM-DD` key used throughout, in local time. */
@@ -50,7 +68,11 @@ export function formatFullDate(date: string): string {
 
 /** The last calendar day of a month, e.g. `2026-09` → `2026-09-30`. */
 export function lastDayOfMonth(month: string): string {
-  const day = new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate();
+  const day = new Date(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5)),
+    0,
+  ).getDate();
   return `${month}-${day}`;
 }
 
@@ -65,7 +87,10 @@ export function reportRange(
   const end = period === 'custom' ? to : lastDayOfMonth(month);
   const days = Math.max(
     1,
-    Math.round((Date.parse(end) - Date.parse(start)) / 86400000) + 1,
+    Math.round(
+      (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) /
+        86400000,
+    ) + 1,
   );
   return { start, end, days };
 }

@@ -142,6 +142,9 @@ export default function SettingsPage() {
           <Link className="secondary-action" href="/change-password">
             Change password
           </Link>
+          <Link className="secondary-action" href="/api/account/export">
+            Export my data
+          </Link>
         </div>
         <form className="account-form" onSubmit={saveName}>
           <label>

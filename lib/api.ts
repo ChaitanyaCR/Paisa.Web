@@ -26,6 +26,12 @@ export function requireUser(
   request: Request,
   options: { allowPasswordChangeRequired?: boolean } = {},
 ): ApiUser | Response {
+  if (!isSameOriginMutation(request))
+    return apiError(
+      403,
+      'CSRF_REJECTED',
+      'This request must originate from this application',
+    );
   const token = sessionToken(request);
   if (!token)
     return apiError(401, 'UNAUTHENTICATED', 'Authentication required');
@@ -38,6 +44,13 @@ export function requireUser(
       'You must change your temporary password',
     );
   return user;
+}
+
+/** SameSite cookies are the primary control; reject cross-origin authenticated writes as defence in depth. */
+export function isSameOriginMutation(request: Request): boolean {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return true;
+  const origin = request.headers.get('origin');
+  return !origin || origin === new URL(request.url).origin;
 }
 
 export function sessionToken(request: Request): string | undefined {

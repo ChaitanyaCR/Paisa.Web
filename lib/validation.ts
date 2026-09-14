@@ -72,6 +72,7 @@ export const signupSchema = z.object({
   name: z.string().trim().min(1).max(80),
   email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
   password: passwordSchema,
+  consent: z.literal(true),
 });
 export const signinSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email().max(254)),

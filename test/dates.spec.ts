@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatDayMonth,
   formatFullDate,
+  addDays,
   lastDayOfMonth,
   monthLabel,
   moveMonth,
@@ -48,6 +49,13 @@ describe('lastDayOfMonth', () => {
   });
 });
 
+describe('addDays', () => {
+  it('moves calendar keys across month and year boundaries without local time', () => {
+    expect(addDays('2026-09-30', 1)).toBe('2026-10-01');
+    expect(addDays('2026-01-01', -1)).toBe('2025-12-31');
+  });
+});
+
 describe('reportRange', () => {
   it('spans the whole month for a monthly report', () => {
     expect(reportRange('month', '2026-09', '', '')).toStrictEqual({
@@ -58,7 +66,9 @@ describe('reportRange', () => {
   });
 
   it('uses the custom window when one is set', () => {
-    expect(reportRange('custom', '2026-09', '2026-09-10', '2026-09-12')).toStrictEqual({
+    expect(
+      reportRange('custom', '2026-09', '2026-09-10', '2026-09-12'),
+    ).toStrictEqual({
       start: '2026-09-10',
       end: '2026-09-12',
       days: 3,
@@ -66,7 +76,9 @@ describe('reportRange', () => {
   });
 
   it('never reports fewer than one day, even for an inverted range', () => {
-    expect(reportRange('custom', '2026-09', '2026-09-20', '2026-09-01').days).toBe(1);
+    expect(
+      reportRange('custom', '2026-09', '2026-09-20', '2026-09-01').days,
+    ).toBe(1);
   });
 });
 
