@@ -46,7 +46,8 @@ function initialEntry(
     type: 'expense',
     amount: '',
     date: `${month}-11`,
-    category: categories.find((c) => c.type === 'expense' && !c.archived)?.id ?? '',
+    category:
+      categories.find((c) => c.type === 'expense' && !c.archived)?.id ?? '',
     notes: '',
   };
 }
@@ -61,18 +62,23 @@ export function TransactionDialog({ month }: { month: string }) {
 
   const selected = categories.find((c) => c.id === entry.category);
 
-  const submit = (event: React.SyntheticEvent) => {
+  const submit = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     const amount = Number(entry.amount);
-    if (!Number.isFinite(amount) || amount <= 0 || !entry.category || !entry.date) {
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      !entry.category ||
+      !entry.date
+    ) {
       setError('Add a valid amount, date, and category before saving.');
       return;
     }
-    saveTransaction(
+    const saved = await saveTransaction(
       { ...entry, id: editing ?? crypto.randomUUID(), amount: toPaise(amount) },
       editing,
     );
-    close();
+    if (saved) close();
   };
 
   return (
@@ -88,11 +94,16 @@ export function TransactionDialog({ month }: { month: string }) {
                 ...entry,
                 type,
                 category:
-                  categories.find((c) => c.type === type && !c.archived)?.id ?? '',
+                  categories.find((c) => c.type === type && !c.archived)?.id ??
+                  '',
               })
             }
           >
-            {type === 'expense' ? <ArrowUpRight size={17} /> : <ArrowDownLeft size={17} />}{' '}
+            {type === 'expense' ? (
+              <ArrowUpRight size={17} />
+            ) : (
+              <ArrowDownLeft size={17} />
+            )}{' '}
             {type === 'expense' ? 'Expense' : 'Income'}
           </button>
         ))}
@@ -120,11 +131,18 @@ export function TransactionDialog({ month }: { month: string }) {
         <label>
           Date
           <Popover>
-            <PopoverTrigger className="date-trigger" aria-label="Select transaction date">
+            <PopoverTrigger
+              className="date-trigger"
+              aria-label="Select transaction date"
+            >
               <span>{formatFullDate(entry.date)}</span>
               <CalendarDays size={16} />
             </PopoverTrigger>
-            <PopoverContent className="transaction-calendar" align="start" sideOffset={8}>
+            <PopoverContent
+              className="transaction-calendar"
+              align="start"
+              sideOffset={8}
+            >
               <Calendar
                 mode="single"
                 selected={new Date(`${entry.date}T12:00:00`)}
@@ -164,7 +182,10 @@ export function TransactionDialog({ month }: { month: string }) {
               <SelectValue className="sr-only" placeholder="Select category" />
               {selected ? (
                 <span className="selected-category-value">
-                  <i className="select-color" style={{ background: selected.color }} />
+                  <i
+                    className="select-color"
+                    style={{ background: selected.color }}
+                  />
                   {selected.name}
                 </span>
               ) : (
@@ -174,12 +195,17 @@ export function TransactionDialog({ month }: { month: string }) {
             <SelectContent className="transaction-select-menu" align="start">
               {categories
                 .filter(
-                  (c) => c.type === entry.type && (!c.archived || c.id === entry.category),
+                  (c) =>
+                    c.type === entry.type &&
+                    (!c.archived || c.id === entry.category),
                 )
                 .map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     <span className="select-option-label">
-                      <i className="select-color" style={{ background: c.color }} />
+                      <i
+                        className="select-color"
+                        style={{ background: c.color }}
+                      />
                       <span>{c.name}</span>
                     </span>
                   </SelectItem>

@@ -9,6 +9,7 @@ import { AppDialogs } from '@/components/dialogs/app-dialogs';
 import { DialogProvider } from '@/components/dialogs/dialog-provider';
 import { Toast } from '@/components/toast';
 import { AuthUserProvider } from '@/components/auth-user';
+import { DataStatus } from '@/components/data-status';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Topbar />
                 <main className="main-content">
                   <PageHeading />
+                  <DataStatus />
                   {children}
                   <AppFooter />
                 </main>

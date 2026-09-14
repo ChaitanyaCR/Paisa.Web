@@ -31,7 +31,7 @@ export function createUser(db: Database, input: NewUser) {
       input.role ?? 'user',
     );
     const insert = db.prepare(
-      'INSERT INTO categories (id, user_id, name, type, color) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO categories (id, user_id, name, type, color, icon) VALUES (?, ?, ?, ?, ?, ?)',
     );
     for (const category of initialCategories)
       insert.run(
@@ -40,6 +40,7 @@ export function createUser(db: Database, input: NewUser) {
         category.name,
         category.type,
         category.color,
+        category.icon,
       );
     db.prepare('INSERT INTO user_settings (user_id) VALUES (?)').run(id);
   })();
@@ -48,6 +49,24 @@ export function createUser(db: Database, input: NewUser) {
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
   };
+}
+
+export function updateUserName(
+  db: Database,
+  userId: string,
+  name: string,
+): boolean {
+  return (
+    db
+      .prepare(
+        "UPDATE users SET name = ?, updated_at = datetime('now') WHERE id = ?",
+      )
+      .run(name.trim(), userId).changes > 0
+  );
+}
+
+export function deleteUser(db: Database, userId: string): boolean {
+  return db.prepare('DELETE FROM users WHERE id = ?').run(userId).changes > 0;
 }
 
 export function findUserByEmail(

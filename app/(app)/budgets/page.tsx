@@ -6,17 +6,19 @@ import { CategoryIcon } from '@/components/category-icon';
 import { useAppState } from '@/components/app-state';
 import { useDialogs } from '@/components/dialogs/dialog-provider';
 import { BudgetProgress } from '@/features/budgets/budget-progress';
-import { budgetKey, categorySpend, inMonth } from '@/lib/aggregate';
+import { budgetKey } from '@/lib/aggregate';
 import { money, percentage } from '@/lib/money';
 import { useFilters } from '@/lib/use-filters';
 
 export default function BudgetsPage() {
-  const { transactions, categories, budgets } = useAppState();
+  const { categories, budgets, budgetSpending, copyPreviousBudgets } =
+    useAppState();
   const { openBudget } = useDialogs();
   const { month } = useFilters();
 
-  const monthly = inMonth(transactions, month);
-  const expenseCategories = categories.filter((c) => c.type === 'expense' && !c.archived);
+  const expenseCategories = categories.filter(
+    (c) => c.type === 'expense' && !c.archived,
+  );
 
   return (
     <>
@@ -35,11 +37,17 @@ export default function BudgetsPage() {
         >
           + Set a budget
         </FluentButton>
+        <FluentButton
+          appearance="secondary"
+          onClick={() => void copyPreviousBudgets(month)}
+        >
+          Copy previous month
+        </FluentButton>
       </div>
       <div className="budget-grid">
         {expenseCategories.map((c) => {
           const limit = budgets[budgetKey(month, c.id)] || 0;
-          const spent = categorySpend(monthly, c.id);
+          const spent = budgetSpending[budgetKey(month, c.id)] ?? 0;
           return (
             <article className="panel budget-card" key={c.id}>
               <div className="panel-heading">
@@ -56,7 +64,8 @@ export default function BudgetsPage() {
                 </button>
               </div>
               <h2>
-                {money(spent)} <small>{limit ? `of ${money(limit)}` : 'spent'}</small>
+                {money(spent)}{' '}
+                <small>{limit ? `of ${money(limit)}` : 'spent'}</small>
               </h2>
               <BudgetProgress label={c.name} spent={spent} limit={limit} />
               <div className="budget-status">

@@ -5,7 +5,14 @@ import {
   webDarkTheme,
   webLightTheme,
 } from '@fluentui/react-components';
-import { createContext, use, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 type Appearance = 'light' | 'dark' | 'system';
 
@@ -24,7 +31,7 @@ export function useTheme(): ThemeContextValue {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [appearance, setAppearance] = useState<Appearance>('system');
+  const [appearance, setAppearanceState] = useState<Appearance>('system');
   const [systemDark, setSystemDark] = useState(false);
   const dark = appearance === 'dark' || (appearance === 'system' && systemDark);
 
@@ -35,6 +42,32 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((settings) => {
+        if (settings?.appearance) setAppearanceState(settings.appearance);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const setAppearance = useCallback(
+    (value: Appearance) => {
+      const previous = appearance;
+      setAppearanceState(value);
+      fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ appearance: value }),
+      })
+        .then((response) => {
+          if (!response.ok) setAppearanceState(previous);
+        })
+        .catch(() => setAppearanceState(previous));
+    },
+    [appearance],
+  );
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
@@ -50,7 +83,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [dark],
   );
 
-  const value = useMemo(() => ({ appearance, setAppearance, dark }), [appearance, dark]);
+  const value = useMemo(
+    () => ({ appearance, setAppearance, dark }),
+    [appearance, dark, setAppearance],
+  );
 
   return (
     <ThemeContext value={value}>

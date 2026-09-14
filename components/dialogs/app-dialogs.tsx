@@ -16,21 +16,25 @@ import { monthLabel } from '@/lib/dates';
 import { useFilters } from '@/lib/use-filters';
 
 function title(modal: string | null, editing: string | null): string {
-  if (modal === 'transaction') return editing ? 'Edit transaction' : 'A new entry';
+  if (modal === 'transaction')
+    return editing ? 'Edit transaction' : 'A new entry';
   if (modal === 'category') return editing ? 'Edit category' : 'Add category';
   if (modal === 'budget') return 'Set a monthly budget';
   return 'Delete this transaction?';
 }
 
 function description(modal: string | null, month: string): string {
-  if (modal === 'transaction') return 'A small moment to keep your money in focus.';
+  if (modal === 'transaction')
+    return 'A small moment to keep your money in focus.';
   if (modal === 'budget') return `Expense limit for ${monthLabel(month)}.`;
-  if (modal === 'delete') return 'This will also update your totals and budget progress.';
+  if (modal === 'delete')
+    return 'This will also update your totals and budget progress.';
   return 'Keep things organised, your way.';
 }
 
 export function AppDialogs() {
-  const { modal, editing, close, openTransaction, seedTransaction } = useDialogs();
+  const { modal, editing, close, openTransaction, seedTransaction } =
+    useDialogs();
   const { deleteTransaction } = useAppState();
   const { month } = useFilters();
 
@@ -65,9 +69,8 @@ export function AppDialogs() {
             <FluentButton
               className="destructive-action"
               appearance="primary"
-              onClick={() => {
-                if (editing) deleteTransaction(editing);
-                close();
+              onClick={async () => {
+                if (editing && (await deleteTransaction(editing))) close();
               }}
             >
               Delete transaction

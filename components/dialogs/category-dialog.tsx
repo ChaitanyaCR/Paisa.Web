@@ -2,11 +2,12 @@
 
 import { Button as FluentButton } from '@fluentui/react-components';
 import { Check } from 'lucide-react';
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { useAppState } from '@/components/app-state';
 import { useDialogs } from '@/components/dialogs/dialog-provider';
 import { categoryColors } from '@/lib/sample-data';
+import { categoryIconOptions, iconFor } from '@/lib/category-icons';
 import type { Kind } from '@/lib/types';
 
 export function CategoryDialog() {
@@ -15,9 +16,10 @@ export function CategoryDialog() {
   const [name, setName] = useState(seedCategory?.name ?? '');
   const [color, setColor] = useState(seedCategory?.color ?? '#3565c9');
   const [type, setType] = useState<Kind>(seedCategory?.type ?? 'expense');
+  const [icon, setIcon] = useState(seedCategory?.icon ?? 'tags');
   const [error, setError] = useState('');
 
-  const submit = (event: React.SyntheticEvent) => {
+  const submit = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     if (!name.trim()) return;
     const duplicate = categories.some(
@@ -30,8 +32,10 @@ export function CategoryDialog() {
       setError('A category with this name already exists.');
       return;
     }
-    saveCategory({ id: editing, name: name.trim(), type, color });
-    close();
+    if (
+      await saveCategory({ id: editing, name: name.trim(), type, color, icon })
+    )
+      close();
   };
 
   return (
@@ -57,6 +61,24 @@ export function CategoryDialog() {
           <option value="income">Income</option>
         </select>
       </label>
+      <fieldset className="icon-field">
+        <legend>Category icon</legend>
+        <div className="icon-options">
+          {categoryIconOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              title={option.label}
+              aria-label={`Choose ${option.label} icon`}
+              aria-pressed={icon === option.value}
+              className={icon === option.value ? 'chosen' : ''}
+              onClick={() => setIcon(option.value)}
+            >
+              {createElement(iconFor(option.value), { size: 18 })}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <fieldset className="color-field">
         <legend>Category color</legend>
         <div className="color-swatches">

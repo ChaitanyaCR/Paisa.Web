@@ -1,20 +1,22 @@
 'use client';
 
 import { Button as FluentButton } from '@fluentui/react-components';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { CategoryIcon, CategoryPill } from '@/components/category-icon';
 import { useAppState } from '@/components/app-state';
 import { useDialogs } from '@/components/dialogs/dialog-provider';
 import type { Kind } from '@/lib/types';
 
 export default function CategoriesPage() {
-  const { categories, transactions, toggleArchive } = useAppState();
+  const { categories, toggleArchive, deleteCategory } = useAppState();
   const { openCategory } = useDialogs();
 
   return (
     <>
       <div className="section-toolbar">
-        <span>{categories.filter((c) => !c.archived).length} active categories</span>
+        <span>
+          {categories.filter((c) => !c.archived).length} active categories
+        </span>
         <FluentButton
           className="primary-action"
           appearance="primary"
@@ -44,7 +46,26 @@ export default function CategoriesPage() {
                       >
                         <Pencil size={15} />
                       </button>
-                      <button className="text-link" onClick={() => toggleArchive(c.id)}>
+                      {!c.transactionCount && (
+                        <button
+                          className="icon-button danger-action"
+                          aria-label={`Delete ${c.name}`}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Delete ${c.name}? This cannot be undone.`,
+                              )
+                            )
+                              void deleteCategory(c.id);
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                      <button
+                        className="text-link"
+                        onClick={() => toggleArchive(c.id)}
+                      >
                         {c.archived ? 'Restore' : 'Archive'}
                       </button>
                     </div>
@@ -53,7 +74,7 @@ export default function CategoriesPage() {
                     <CategoryPill category={c} />
                   </h3>
                   <p>
-                    {transactions.filter((t) => t.category === c.id).length} transactions ·{' '}
+                    {c.transactionCount ?? 0} transactions ·{' '}
                     {c.archived ? 'Archived' : 'Active'}
                   </p>
                 </article>

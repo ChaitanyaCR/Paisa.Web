@@ -792,6 +792,11 @@ input[type='date'] {
   align-items: center;
   gap: 10px;
 }
+.danger-action { color: var(--destructive); }
+.icon-field { margin: 18px 0; }
+.icon-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+.icon-options button { border: 1px solid var(--border); background: var(--card); border-radius: 7px; padding: 8px; }
+.icon-options button.chosen { border-color: var(--primary); color: var(--primary); background: var(--brand-soft); }
 .category-card p {
   font-size: 11px;
   margin-top: 7px;
@@ -925,6 +930,12 @@ input[type='date'] {
   flex-wrap: wrap;
   margin: 22px 0;
 }
+.fixed-setting { color: var(--muted-foreground); white-space: nowrap; }
+.account-form { display: flex; align-items: end; gap: 10px; margin: 18px 0; }
+.account-form label { flex: 1; }
+.danger-zone { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 20px; display: grid; gap: 10px; }
+.danger-zone p { font-size: 11px; }
+.danger-zone .fui-Input, .danger-zone input { max-width: 340px; }
 .preview-note {
   font-size: 11px;
   color: var(--muted-foreground);

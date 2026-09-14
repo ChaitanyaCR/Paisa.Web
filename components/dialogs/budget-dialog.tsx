@@ -12,17 +12,18 @@ export function BudgetDialog({ month }: { month: string }) {
   const { categories, budgets, saveBudget } = useAppState();
   const { seedBudgetCategory, close } = useDialogs();
 
-  const expenseCategories = categories.filter((c) => c.type === 'expense' && !c.archived);
+  const expenseCategories = categories.filter(
+    (c) => c.type === 'expense' && !c.archived,
+  );
   const initialCategory = seedBudgetCategory ?? expenseCategories[0]?.id ?? '';
   const [categoryId, setCategoryId] = useState(initialCategory);
   const [amount, setAmount] = useState(
     String(toRupees(budgets[budgetKey(month, initialCategory)] ?? 0)),
   );
 
-  const submit = (event: React.SyntheticEvent) => {
+  const submit = async (event: React.SyntheticEvent) => {
     event.preventDefault();
-    saveBudget(month, categoryId, toPaise(amount));
-    close();
+    if (await saveBudget(month, categoryId, toPaise(amount))) close();
   };
 
   return (
@@ -33,7 +34,9 @@ export function BudgetDialog({ month }: { month: string }) {
           value={categoryId}
           onChange={(e) => {
             setCategoryId(e.target.value);
-            setAmount(String(toRupees(budgets[budgetKey(month, e.target.value)] ?? 0)));
+            setAmount(
+              String(toRupees(budgets[budgetKey(month, e.target.value)] ?? 0)),
+            );
           }}
         >
           {expenseCategories.map((c) => (
@@ -55,7 +58,9 @@ export function BudgetDialog({ month }: { month: string }) {
           onChange={(e) => setAmount(e.target.value)}
         />
       </label>
-      <p className="preview-note">Set to 0 to remove the limit for this month.</p>
+      <p className="preview-note">
+        Set to 0 to remove the limit for this month.
+      </p>
       <FluentButton type="submit" appearance="primary">
         Save budget
       </FluentButton>

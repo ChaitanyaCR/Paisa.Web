@@ -11,7 +11,7 @@ type TransactionRow = {
   notes: string;
 };
 
-function where(userId: string, filters: TransactionFilters) {
+export function transactionWhere(userId: string, filters: TransactionFilters) {
   const clauses = ['t.user_id = ?'];
   const values: Array<string | number> = [userId];
   if (filters.type) {
@@ -43,7 +43,7 @@ export function listTransactions(
   userId: string,
   filters: TransactionFilters,
 ) {
-  const condition = where(userId, filters);
+  const condition = transactionWhere(userId, filters);
   const from = `FROM transactions t JOIN categories c ON c.id = t.category_id WHERE ${condition.sql}`;
   const total = (
     db.prepare(`SELECT count(*) count ${from}`).get(...condition.values) as {
@@ -52,9 +52,14 @@ export function listTransactions(
   ).count;
   const totals = db
     .prepare(
-      `SELECT coalesce(sum(CASE WHEN t.type = 'income' THEN t.amount_paise ELSE 0 END), 0) income, coalesce(sum(CASE WHEN t.type = 'expense' THEN t.amount_paise ELSE 0 END), 0) expense ${from}`,
+      `SELECT coalesce(sum(CASE WHEN t.type = 'income' THEN t.amount_paise ELSE 0 END), 0) income, coalesce(sum(CASE WHEN t.type = 'expense' THEN t.amount_paise ELSE 0 END), 0) expense, sum(t.type = 'income') incomeCount, sum(t.type = 'expense') expenseCount ${from}`,
     )
-    .get(...condition.values) as { income: number; expense: number };
+    .get(...condition.values) as {
+    income: number;
+    expense: number;
+    incomeCount: number;
+    expenseCount: number;
+  };
   const items = db
     .prepare(
       `SELECT t.id, t.type, t.amount_paise amount, t.date, t.category_id category, t.notes ${from} ORDER BY t.date DESC, t.created_at DESC LIMIT ? OFFSET ?`,

@@ -13,12 +13,12 @@
 
 ## 📍 Resume here (for a fresh session)
 
-**Current state:** Phases 0 and 1 are complete and committed. Phases 2 and 3 are complete in
-the `feat/data-layer` working tree and awaiting commit. The app still runs on in-memory sample
-financial data via [`components/app-state.tsx`](../components/app-state.tsx); Phase 4 replacing
-that state seam with the authenticated APIs is next.
+**Current state:** Phases 0 and 1 are complete and committed. Phases 2, 3, and 5 plus Phase 4's
+functional work are complete in the `feat/data-layer` working tree and awaiting commit. Account
+data is loaded and mutated through authenticated APIs; the sample financial-data store has been
+removed. The remaining Phase 4 work is the optional server-component bundle optimization.
 
-**Before writing any Phase 4 code:**
+**Before continuing implementation:**
 1. Read [`decisions.md`](decisions.md) in full — D-001 through D-009 are binding constraints,
    not suggestions. D-005 (integer paise) and D-008 (SQLite, not D1) especially.
 2. Run the full gate to confirm you're starting from a known-good state:
@@ -37,12 +37,10 @@ proceeding.
 The original prototype was a 1942-line `'use client'` component (`app/page.tsx`) holding the
 entire product: 6 pages, 4 dialogs, 3 auth screens, charts, filters and toasts — all driven by
 `useState` over seeded sample data. Phase 1 broke it into 29 files (largest 221 lines); the old
-`app/page.tsx` is now a 5-line redirect to `/overview`. Nothing behind the UI is real yet: no
-schema beyond the Phase 0 bootstrap table, no auth, no persistence past a page reload.
-
-The Settings screen still states this outright: *"This review uses sample data in memory.
-Changes reset when the page reloads. Authentication and cross-device sync are not connected
-yet."* Removing that notice is task 3.9, gated on auth actually existing.
+`app/page.tsx` is now a 5-line redirect to `/overview`. The product underneath it is now real:
+authenticated, user-scoped SQLite persistence backs the financial screens and settings. The
+remaining work is correctness, production hardening, compliance operations, and the optional
+server-component optimization tracked in Phase 4.
 
 So "implement every feature in the design" means: keep the UI, build the product underneath it,
 and close the gaps the prototype papers over.
@@ -156,7 +154,14 @@ must replace the in-memory counter with a shared store before scaling beyond one
 
 ---
 
-## Phase 4 — Wire the UI to the backend
+## Phase 4 — Wire the UI to the backend ◐
+
+**Functional wiring is done.** Transactions, categories, budgets, settings, and analytics now
+use authenticated APIs. Transaction lists are filtered and paginated by SQL with full-result
+totals; analytics and budget spending use grouped SQL; mutations roll back optimistic state on
+failure; and pages expose loading, empty, retryable error states. The final server-component
+optimization from Phase 1.6 remains because the shared interactive shell still owns dialogs,
+URL filters, toasts, and mutation refreshes.
 
 | # | Task | Acceptance |
 |---|---|---|
@@ -171,16 +176,23 @@ must replace the in-memory counter with a shared store before scaling beyond one
 
 ---
 
-## Phase 5 — Features the design implies but does not deliver
+## Phase 5 — Features the design implies but does not deliver ✅
+
+**Done for the local-only V1.** Migration `0004_product_gaps.sql` persists category icons.
+Categories can be deleted only when neither transactions nor budgets reference them, monthly
+budgets can be copied from the preceding month, and account owners can update their display name,
+change their password, or permanently delete their account and cascading data. Email is immutable
+in V1 because D-004 excludes the external verification channel a safe self-service change needs.
+Currency and timezone are explicitly labelled fixed rather than presented as editable controls.
 
 | # | Task | Notes |
 |---|---|---|
-| 5.1 | **Category icons.** [`lib/category-icons.ts`](../lib/category-icons.ts) hardcodes icons against the seven seed slugs. Any category created through the UI gets a `crypto.randomUUID()` id and silently falls back to the generic `Tags` icon. Add an `icon` column and an icon picker to `components/dialogs/category-dialog.tsx` | Without this, the design's per-category iconography breaks the moment a user adds a category |
-| 5.2 | **Currency and timezone** are rendered as static text (`INR · ₹`, `Asia/Kolkata`) in `app/(app)/settings/page.tsx`. Either make them real settings or mark them explicitly fixed | Decide either way; do not ship a control that looks editable and is not |
-| 5.3 | **Delete a category.** Only archive exists today (`toggleArchive` in `app-state.tsx`). Users will expect delete for a mistyped category — needs a reassign-or-block rule for attached transactions | |
-| 5.4 | **Archived categories still appear** in the Transactions category filter dropdown (`features/transactions/filter-bar.tsx`). Filter them out, or group them under an "Archived" heading | |
-| 5.5 | Copy budgets from the previous month. The month-keyed budget model (`${month}:${categoryId}` in `lib/aggregate.ts`'s `budgetKey`) makes re-entering every limit each month tedious | Nominally a nice-to-have, but the per-month model makes it near-mandatory in practice |
-| 5.6 | Account management: change name, change email (with re-verification), change password, delete account | Account deletion is a DPDP obligation, not a nice-to-have — see Phase 7 |
+| 5.1 | ✅ Persist category icons and provide an icon picker | Existing seed categories are backfilled; new categories default safely |
+| 5.2 | ✅ Mark INR and Asia/Kolkata explicitly fixed for V1 | They no longer resemble editable settings |
+| 5.3 | ✅ Delete unused categories; block deletion when transactions or budgets reference one | Archiving remains the safe option for referenced categories |
+| 5.4 | ✅ Exclude archived categories from transaction and budget selectors | Existing records still render their archived category |
+| 5.5 | ✅ Copy the preceding month's budgets into the selected month | Existing target-month values are updated intentionally |
+| 5.6 | ✅ Change display name and password; permanently delete an account. Sign-in email is fixed for V1 | Email re-verification is deferred while D-004 forbids external delivery |
 
 ---
 
@@ -245,13 +257,13 @@ and Phase 6.6's chart replacement; run them before and after either change.
 ## Sequencing
 
 ```
-Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ✅ ──► Phase 3 ✅ ──► Phase 4 ──► Phase 5
+Phase 0 ✅ ──► Phase 1 ✅ ──► Phase 2 ✅ ──► Phase 3 ✅ ──► Phase 4 ◐ ──► Phase 5 ✅
                                   │                        │
                                   └──► Phase 6 (parallel) ◄┘
                                              │
                                              └──► Phase 7 (7.6 already active since Phase 0)
 ```
 
-Phase 4 is next. Phases 0–4 are the critical path — completing them is the point
+Phase 4's server-component optimization is the remaining critical-path item. Completing it is the point
 at which every feature in the design is genuinely functional. Phase 5 closes the gaps the
 prototype hides, Phase 6 can run alongside Phase 4, and Phase 7 gates launch.

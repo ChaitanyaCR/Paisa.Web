@@ -5,13 +5,23 @@ import { countByType } from '@/lib/aggregate';
 import { money, percentage } from '@/lib/money';
 import type { Transaction } from '@/lib/types';
 
-export function StatCards({ transactions }: { transactions: Transaction[] }) {
-  const income = transactions
-    .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const expense = transactions
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+export function StatCards({
+  transactions,
+  totals,
+}: {
+  transactions: Transaction[];
+  totals?: { income: number; expense: number; expenseCount: number };
+}) {
+  const income =
+    totals?.income ??
+    transactions
+      .filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+  const expense =
+    totals?.expense ??
+    transactions
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <div className="stats-grid">
@@ -38,7 +48,8 @@ export function StatCards({ transactions }: { transactions: Transaction[] }) {
         <h2>{money(expense)}</h2>
         <span className="stat-caption">
           <span className="dot peach-dot" />
-          {countByType(transactions, 'expense')} expense entries
+          {totals?.expenseCount ?? countByType(transactions, 'expense')} expense
+          entries
         </span>
       </article>
       <article className="stat-card savings">
