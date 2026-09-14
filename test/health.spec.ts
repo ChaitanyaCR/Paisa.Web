@@ -13,7 +13,7 @@ describe('checkDatabase', () => {
 
     expect(checkDatabase(db)).toStrictEqual({
       ok: true,
-      schemaVersion: '0004',
+      schemaVersion: '0005',
     });
   });
 

@@ -5,7 +5,12 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useDialogs } from '@/components/dialogs/dialog-provider';
 import { moveMonth } from '@/lib/dates';
-import { entryPages, monthScopedPages, navNameForPath, pageCopy } from '@/lib/navigation';
+import {
+  entryPages,
+  monthScopedPages,
+  navNameForPath,
+  pageCopy,
+} from '@/lib/navigation';
 import { useFilters } from '@/lib/use-filters';
 
 export function PageHeading() {
@@ -15,6 +20,24 @@ export function PageHeading() {
 
   const current = navNameForPath(pathname);
   const copy = pageCopy[current];
+  const [year, monthNumber] = month.split('-');
+  const years = Array.from({ length: 21 }, (_, index) =>
+    String(Number(year) - 10 + index),
+  );
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
   return (
     <div className="page-heading">
@@ -25,7 +48,11 @@ export function PageHeading() {
       </div>
       <div className="heading-actions">
         {monthScopedPages.includes(current) && (
-          <div className="month-picker" role="group" aria-label="Month navigation">
+          <div
+            className="month-picker"
+            role="group"
+            aria-label="Month navigation"
+          >
             <button
               title="Previous month"
               aria-label="Previous month"
@@ -33,12 +60,30 @@ export function PageHeading() {
             >
               <ChevronLeft size={16} />
             </button>
-            <input
+            <select
               aria-label="Selected month"
-              type="month"
-              value={month}
-              onChange={(e) => e.target.value && setFilters({ month: e.target.value })}
-            />
+              value={monthNumber}
+              onChange={(e) =>
+                setFilters({ month: `${year}-${e.target.value}` })
+              }
+            >
+              {months.map((name, index) => (
+                <option key={name} value={String(index + 1).padStart(2, '0')}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Selected year"
+              value={year}
+              onChange={(e) =>
+                setFilters({ month: `${e.target.value}-${monthNumber}` })
+              }
+            >
+              {years.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
             <button
               title="Next month"
               aria-label="Next month"

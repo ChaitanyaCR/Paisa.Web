@@ -1,8 +1,20 @@
 'use client';
 
 import { ArrowUpRight } from 'lucide-react';
-import { chartCeiling, type ChartBar } from '@/lib/aggregate';
-import { money, ratio } from '@/lib/money';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import type { ChartBar } from '@/lib/aggregate';
+import { money } from '@/lib/money';
+
+const chartConfig = {
+  income: { label: 'Income', color: 'var(--income)' },
+  expense: { label: 'Expenses', color: 'var(--expense)' },
+} satisfies ChartConfig;
 
 export function IncomeExpenseChart({
   data,
@@ -11,8 +23,6 @@ export function IncomeExpenseChart({
   data: ChartBar[];
   periodLabel: string;
 }) {
-  const ceiling = chartCeiling(data);
-
   return (
     <section className="panel">
       <div className="panel-heading">
@@ -32,32 +42,39 @@ export function IncomeExpenseChart({
           Expenses
         </span>
       </div>
-      <div className="bar-chart" role="img" aria-label="Income and expenses grouped by period">
-        <div className="chart-axis">
-          {[1, 0.75, 0.5, 0.25, 0].map((step) => (
-            <span key={step}>{money(Math.round(ceiling * step))}</span>
-          ))}
-        </div>
-        <div className="bars">
-          {data.map((d) => (
-            <div className="bar-group" key={d.label}>
-              <div className="bar-pair">
-                <div
-                  className="bar income-bar"
-                  style={{ height: `${ratio(d.income, ceiling)}%` }}
-                  title={`${d.label} income: ${money(d.income)}`}
-                />
-                <div
-                  className="bar expense-bar"
-                  style={{ height: `${ratio(d.expense, ceiling)}%` }}
-                  title={`${d.label} expenses: ${money(d.expense)}`}
-                />
-              </div>
-              <span>{d.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ChartContainer className="analytics-chart" config={chartConfig}>
+        <BarChart
+          data={data}
+          accessibilityLayer
+          margin={{ top: 8, right: 4, left: -18 }}
+        >
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => money(Number(value))}
+          />
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                formatter={(value) => money(Number(value))}
+              />
+            }
+          />
+          <Bar
+            dataKey="income"
+            fill="var(--color-income)"
+            radius={[4, 4, 0, 0]}
+          />
+          <Bar
+            dataKey="expense"
+            fill="var(--color-expense)"
+            radius={[4, 4, 0, 0]}
+          />
+        </BarChart>
+      </ChartContainer>
       <div className="chart-foot">
         <span>Every entry adds to the bigger picture.</span>
         <ArrowUpRight size={16} />

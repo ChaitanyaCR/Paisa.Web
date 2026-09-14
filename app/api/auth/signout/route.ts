@@ -1,9 +1,11 @@
-import { sessionToken } from '@/lib/api';
+import { isResponse, requireUser, sessionToken } from '@/lib/api';
 import { clearSessionCookie } from '@/lib/auth/http';
 import { getDb } from '@/lib/db/client';
 import { deleteSession } from '@/lib/db/sessions';
 
 export function POST(request: Request) {
+  const user = requireUser(request, { allowPasswordChangeRequired: true });
+  if (isResponse(user)) return user;
   const token = sessionToken(request);
   if (token) deleteSession(getDb(), token);
   return new Response(null, {

@@ -58,6 +58,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
                 name: form.get('name'),
                 email: form.get('email'),
                 password: form.get('password'),
+                consent: form.get('consent') === 'on',
               }),
             }).catch(() => null);
             if (response?.ok) window.location.assign('/overview');
@@ -97,6 +98,19 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             <Link className="text-link" href="/reset">
               Forgot password?
             </Link>
+          )}
+          {mode === 'signup' && (
+            <label className="consent-control">
+              <input required name="consent" type="checkbox" />
+              <span>
+                I agree to the use of my data to provide Paisa, as described in
+                the{' '}
+                <Link className="text-link" href="/privacy">
+                  privacy notice
+                </Link>
+                .
+              </span>
+            </label>
           )}
           <FluentButton appearance="primary" type="submit" disabled={busy}>
             {submit} <ArrowRight size={16} />

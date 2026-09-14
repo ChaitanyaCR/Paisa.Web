@@ -324,7 +324,7 @@ h1 {
   width: 25px;
   height: 36px;
 }
-.month-picker input {
+.month-picker select {
   width: 132px;
   border: 0;
   background: none;
@@ -459,6 +459,10 @@ h1 {
   display: flex;
   height: 165px;
   gap: 13px;
+}
+.analytics-chart {
+  height: 190px;
+  margin-top: 12px;
 }
 .chart-axis {
   display: flex;
@@ -1260,6 +1264,16 @@ form .optional {
 .auth-form form {
   margin-top: 28px;
 }
+.consent-control {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.consent-control input { margin-top: 2px; }
+.privacy-page { max-width: 720px; margin: 0 auto; padding: 64px 24px; line-height: 1.6; }
+.privacy-page h1, .privacy-page h2 { margin-top: 28px; }
 .auth-form form > .fui-Button {
   width: 100%;
   height: 43px;
@@ -1293,6 +1307,9 @@ button:disabled {
   }
   .bar-chart {
     height: 210px;
+  }
+  .analytics-chart {
+    height: 170px;
   }
   .panel {
     padding: 27px;
@@ -1456,7 +1473,7 @@ button:disabled {
   .month-picker {
     height: 40px;
   }
-  .month-picker input {
+  .month-picker select {
     font-size: 10px;
     width: 123px;
   }
@@ -1748,7 +1765,7 @@ button:disabled {
   background: var(--brand-soft);
   border-color: var(--primary);
 }
-.month-picker input {
+.month-picker select {
   height: 38px;
   width: 148px;
   padding: 0 10px;
@@ -1757,7 +1774,7 @@ button:disabled {
   border-radius: 7px;
   color-scheme: light;
 }
-.dark .month-picker input {
+.dark .month-picker select {
   color-scheme: dark;
 }
 .category-pill {
@@ -1985,7 +2002,7 @@ button:disabled {
   .month-picker {
     flex: 1;
   }
-  .month-picker input {
+  .month-picker select {
     flex: 1;
     width: 135px;
     font-size: 12px;
@@ -1994,7 +2011,7 @@ button:disabled {
     width: 40px;
     height: 40px;
   }
-  .month-picker input {
+  .month-picker select {
     height: 40px;
   }
   .heading-actions > .fui-Button {
